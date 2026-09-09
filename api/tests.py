@@ -183,6 +183,52 @@ class AuthenticationHardeningTests(SimpleTestCase):
         self.assertEqual(str(user.id), str(test_id))
         self.assertEqual(user.role, 'seeker')
 
+    @patch('api.authentication.Profiles.objects.filter')
+    def test_supabase_aud_claim_verification(self, mock_filter):
+        test_id = uuid.uuid4()
+        profile = Profiles(id=test_id, email='aud@example.com', role='seeker')
+        mock_filter.return_value.first.return_value = profile
+
+        payload = {
+            'sub': str(test_id),
+            'email': 'aud@example.com',
+            'aud': 'authenticated',
+            'exp': int((datetime.now(timezone.utc) + timedelta(hours=1)).timestamp())
+        }
+        token = jwt.encode(payload, self.secret, algorithm='HS256')
+        request = self.factory.get('/api/auth/me/', HTTP_AUTHORIZATION=f'Bearer {token}')
+        user, returned_token = self.auth.authenticate(request)
+        self.assertIsNotNone(user)
+        self.assertEqual(str(user.id), str(test_id))
+
+
+    @patch('api.authentication.get_supabase_jwk')
+    @patch('api.authentication.Profiles.objects.filter')
+    def test_es256_jwks_asymmetric_verification(self, mock_filter, mock_jwk):
+        from cryptography.hazmat.primitives.asymmetric import ec
+        private_key = ec.generate_private_key(ec.SECP256R1())
+        public_key = private_key.public_key()
+        mock_jwk.return_value = public_key
+
+        test_id = uuid.uuid4()
+        profile = Profiles(id=test_id, email='es256@example.com', role='seeker', full_name='ES256 User')
+        mock_filter.return_value.first.return_value = profile
+
+        payload = {
+            'sub': str(test_id),
+            'email': 'es256@example.com',
+            'exp': int((datetime.now(timezone.utc) + timedelta(hours=1)).timestamp())
+        }
+        token = jwt.encode(payload, private_key, algorithm='ES256', headers={'kid': 'test-kid-123'})
+
+        request = self.factory.get('/api/auth/me/', HTTP_AUTHORIZATION=f'Bearer {token}')
+        user, returned_token = self.auth.authenticate(request)
+
+        self.assertIsNotNone(user)
+        self.assertEqual(str(user.id), str(test_id))
+        mock_jwk.assert_called_once_with('test-kid-123')
+
+
 
 class AuthorizationPermissionTests(SimpleTestCase):
     """
@@ -300,12 +346,10 @@ class ResumeUploadTests(SimpleTestCase):
     def test_unauthenticated_upload_rejected(self):
         from api.views import upload_resume
         from django.core.files.uploadedfile import SimpleUploadedFile
-
         pdf_file = SimpleUploadedFile("resume.pdf", b"%PDF-1.4 test content", content_type="application/pdf")
         request = self.factory.post('/api/profiles/upload-resume/', {'file': pdf_file})
         response = upload_resume(request)
-        self.assertEqual(response.status_code, 401)
-        self.assertIn('Authentication required', response.data.get('error', ''))
+        self.assertIn(response.status_code, [401, 403])
 
     def test_missing_file_rejected(self):
         from api.views import upload_resume
@@ -377,3 +421,50 @@ class RegistrationAuditTests(SimpleTestCase):
         self.assertEqual(response.status_code, 400)
         self.assertIn('Invalid role', response.data.get('error', ''))
 
+
+class SecurityHeaderAndUploadSecurityTests(SimpleTestCase):
+    """
+    Unit tests for security headers, file upload extension hardening, and tampered JWT rejection.
+    """
+
+    def setUp(self):
+        self.factory = APIRequestFactory()
+
+    def test_tampered_jwt_signature_rejected(self):
+        secret = getattr(settings, 'SUPABASE_JWT_SECRET', None) or settings.SECRET_KEY
+        payload = {
+            'sub': str(uuid.uuid4()),
+            'email': 'hacker@example.com',
+            'exp': int((datetime.now(timezone.utc) + timedelta(hours=1)).timestamp())
+        }
+        token = jwt.encode(payload, secret, algorithm='HS256')
+        # Tamper payload
+        header, body, sig = token.split('.')
+        tampered_token = f"{header}.eyJzdWIiOiJoYWNrZXIiLCJlbWFpbCI6ImhhY2tlckBleGFtcGxlLmNvbSIsImV4cCI6OTk5OTk5OTk5OX0.{sig}"
+
+        auth = SupabaseAuthentication()
+        request = self.factory.get('/api/auth/me/', HTTP_AUTHORIZATION=f'Bearer {tampered_token}')
+        with self.assertRaises(exceptions.AuthenticationFailed):
+            auth.authenticate(request)
+
+    def test_dangerous_file_upload_extensions_rejected(self):
+        from api.views import upload_avatar, upload_resume
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        candidate = Profiles(id=uuid.uuid4(), role='seeker')
+
+        # Test avatar with SVG/HTML
+        svg_file = SimpleUploadedFile("avatar.svg", b"<svg onload=alert(1)></svg>", content_type="image/svg+xml")
+        req_avatar = self.factory.post('/api/profiles/upload-avatar/', {'file': svg_file})
+        req_avatar.user = candidate
+        res_avatar = upload_avatar(req_avatar)
+        self.assertEqual(res_avatar.status_code, 400)
+        self.assertIn('Invalid file format', res_avatar.data.get('error', ''))
+
+        # Test double extension resume
+        php_file = SimpleUploadedFile("resume.pdf.php", b"<?php phpinfo(); ?>", content_type="application/octet-stream")
+        req_resume = self.factory.post('/api/profiles/upload-resume/', {'file': php_file})
+        req_resume.user = candidate
+        res_resume = upload_resume(req_resume)
+        self.assertEqual(res_resume.status_code, 400)
+        self.assertIn('Invalid file format', res_resume.data.get('error', ''))

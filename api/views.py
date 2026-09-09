@@ -158,7 +158,10 @@ def auth_register(request):
             json={
                 'email': email,
                 'password': password,
-                'data': user_metadata
+                'data': user_metadata,
+                'options': {
+                    'emailRedirectTo': getattr(settings, 'FRONTEND_URL', 'http://localhost:5173')
+                }
             },
             timeout=10
         )
@@ -358,10 +361,11 @@ def profile_detail(request, pk):
 
 
 @api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
 def upload_avatar(request):
     """
     Upload avatar image to Supabase storage bucket 'avatars'.
-    Validates file size (max 2MB) and content type.
+    Validates file size (max 2MB), extension, and content type.
     """
     if not request.user or not request.user.is_authenticated:
         return Response({'error': 'Authentication required'}, status=status.HTTP_401_UNAUTHORIZED)
@@ -374,14 +378,21 @@ def upload_avatar(request):
     if file_obj.size > 2 * 1024 * 1024:
         return Response({'error': 'File size exceeds maximum limit of 2MB'}, status=status.HTTP_400_BAD_REQUEST)
 
-    allowed_types = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+    allowed_exts = {'jpg', 'jpeg', 'png', 'webp', 'gif'}
+    allowed_types = {'image/jpeg', 'image/png', 'image/webp', 'image/gif'}
+
+    parts = file_obj.name.lower().split('.')
+    ext = parts[-1] if len(parts) > 1 else ''
+
+    if ext not in allowed_exts or any(bad in parts for bad in ['php', 'exe', 'html', 'svg', 'js', 'sh']):
+        return Response({'error': 'Invalid file format. Allowed image formats: JPEG, PNG, WEBP, GIF'}, status=status.HTTP_400_BAD_REQUEST)
+
     content_type = file_obj.content_type or 'image/jpeg'
     if content_type not in allowed_types:
-        return Response({'error': 'Invalid file type. Allowed: JPEG, PNG, WEBP, GIF'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'error': 'Invalid file content type. Allowed: JPEG, PNG, WEBP, GIF'}, status=status.HTTP_400_BAD_REQUEST)
 
     user_id = str(request.user.id)
     timestamp = int(datetime.datetime.now().timestamp() * 1000)
-    ext = file_obj.name.split('.')[-1].lower() if '.' in file_obj.name else 'jpg'
     filename = f"{user_id}/{timestamp}.{ext}"
 
     auth_header = request.headers.get('Authorization') or (f"Bearer {request.auth}" if getattr(request, 'auth', None) else f"Bearer {SUPABASE_KEY}")
@@ -421,18 +432,17 @@ def upload_avatar(request):
             err_msg = res.text or err_msg
         if 'signature verification failed' in err_msg:
             err_msg += ' (Demo accounts use locally signed development tokens which cannot authenticate directly with remote Supabase Storage. Please sign in with a registered Supabase account)'
-        return Response({'error': f'Storage upload failed: {err_msg}', 'details': res.text}, status=res.status_code)
+        return Response({'error': f'Storage upload failed: {err_msg}'}, status=res.status_code)
     except Exception as e:
         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 @api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
 def upload_resume(request):
     """
     Upload resume document to Supabase storage bucket 'resumes'.
-    Validates file size (max 5MB) and file extension (PDF, DOC, DOCX).
-    Ensures authenticated user from JWT, updates profiles.resume_url,
-    and returns the updated profile object.
+    Validates file size (max 5MB), file extension (PDF, DOC, DOCX), and content type.
     """
     if not request.user or not request.user.is_authenticated:
         return Response({'error': 'Authentication required'}, status=status.HTTP_401_UNAUTHORIZED)
@@ -445,10 +455,19 @@ def upload_resume(request):
     if file_obj.size > 5 * 1024 * 1024:
         return Response({'error': 'File size exceeds maximum limit of 5MB'}, status=status.HTTP_400_BAD_REQUEST)
 
-    allowed_exts = ['pdf', 'doc', 'docx']
-    ext = file_obj.name.split('.')[-1].lower() if '.' in file_obj.name else ''
-    if ext not in allowed_exts:
-        return Response({'error': 'Invalid file format. Allowed: PDF, DOC, DOCX'}, status=status.HTTP_400_BAD_REQUEST)
+    allowed_exts = {'pdf', 'doc', 'docx'}
+    parts = file_obj.name.lower().split('.')
+    ext = parts[-1] if len(parts) > 1 else ''
+
+    if ext not in allowed_exts or any(bad in parts for bad in ['exe', 'php', 'html', 'svg', 'js', 'sh', 'bat']):
+        return Response({'error': 'Invalid file format. Allowed document formats: PDF, DOC, DOCX'}, status=status.HTTP_400_BAD_REQUEST)
+
+    mime_map = {
+        'pdf': 'application/pdf',
+        'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'doc': 'application/msword'
+    }
+    content_type = mime_map.get(ext, file_obj.content_type or 'application/octet-stream')
 
     user_id = str(request.user.id)
     timestamp = int(datetime.datetime.now().timestamp() * 1000)

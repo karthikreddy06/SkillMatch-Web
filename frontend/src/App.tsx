@@ -168,26 +168,58 @@ const MainAppContent: React.FC = () => {
     }
   }, [isAuthenticated, role]);
 
-  // Listen to URL hash for direct navigation like #login or #signup
+  // Listen to URL hash for direct navigation (#login, #signup) and Supabase Auth email verification callback (#access_token=..., #error=...)
   useEffect(() => {
-    const handleHash = () => {
-      const hash = window.location.hash.toLowerCase();
-      if (hash === '#login' || hash === '#signin') {
+    const handleHash = async () => {
+      const rawHash = window.location.hash;
+      const lowerHash = rawHash.toLowerCase();
+
+      if (rawHash.includes('access_token=')) {
+        const params = new URLSearchParams(rawHash.replace(/^#/, ''));
+        const token = params.get('access_token');
+        if (token) {
+          localStorage.setItem('skillmatch_token', token);
+          try {
+            const freshProfile = await api.getMe();
+            setUserProfile(freshProfile);
+            showToast('Email verified successfully! Welcome to SkillMatch.', 'success');
+          } catch {
+            showToast('Email verified successfully. Please sign in to continue.', 'success');
+          }
+          window.history.replaceState(null, '', window.location.pathname);
+          return;
+        }
+      }
+
+      if (rawHash.includes('error=')) {
+        const params = new URLSearchParams(rawHash.replace(/^#/, ''));
+        const errDesc = params.get('error_description') || '';
+        if (errDesc.toLowerCase().includes('expired') || errDesc.toLowerCase().includes('already') || errDesc.toLowerCase().includes('invalid')) {
+          showToast('The verification link is invalid or has already been used. Please request a new verification email.', 'error');
+        } else {
+          showToast('Verification link process failed. Please sign in or request a new verification email.', 'error');
+        }
+        window.history.replaceState(null, '', window.location.pathname);
+        return;
+      }
+
+      if (lowerHash === '#login' || lowerHash === '#signin') {
         setAuthModalConfig({ isOpen: true, mode: 'login', role: 'seeker' });
-      } else if (hash === '#signup' || hash === '#register') {
+      } else if (lowerHash === '#signup' || lowerHash === '#register') {
         setAuthModalConfig({ isOpen: true, mode: 'register', role: 'seeker' });
-      } else if (hash === '#privacy') {
+      } else if (lowerHash === '#privacy') {
         setActiveTab('privacy');
-      } else if (hash === '#support') {
+      } else if (lowerHash === '#support') {
         setActiveTab('support');
-      } else if (hash === '#terms') {
+      } else if (lowerHash === '#terms') {
         setActiveTab('terms');
       }
     };
     handleHash();
     window.addEventListener('hashchange', handleHash);
     return () => window.removeEventListener('hashchange', handleHash);
-  }, []);
+  }, [setUserProfile, showToast]);
+
 
   // Fetch Jobs
   const fetchJobs = async () => {
@@ -384,6 +416,7 @@ const MainAppContent: React.FC = () => {
                 onToggleSave={handleToggleSave}
                 onViewApplications={() => navigateInApp('applications')}
                 onRequestLocation={requestUserLocation}
+                onExploreJobs={() => navigateInApp('discover')}
               />
             )}
             {(activeTab === 'matching' || activeTab === 'activity') && (
@@ -395,6 +428,7 @@ const MainAppContent: React.FC = () => {
                 onToggleSave={handleToggleSave}
                 onViewApplications={() => navigateInApp('applications')}
                 onRequestLocation={requestUserLocation}
+                onExploreJobs={() => navigateInApp('discover')}
               />
             )}
             {activeTab === 'discover' && (

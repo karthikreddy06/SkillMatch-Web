@@ -3510,3 +3510,395 @@ html {
     padding-top: 1.5rem !important;
   }
 }
+
+/* =========================================================================
+   SKILLMATCH DASHBOARD DESIGN SYSTEM (SUBTLE AMBIENT & LIGHT FOUNDATION)
+   ========================================================================= */
+
+.dashboard-app-shell {
+  min-height: 100vh;
+  position: relative;
+  background-color: #f8fafc;
+  color: #0f172a;
+  overflow-x: hidden;
+}
+
+/* Subtle animated background gradient blobs (similar to landing page) */
+.dashboard-app-shell::before {
+  content: '';
+  position: fixed;
+  top: -12%;
+  left: 12%;
+  width: 45vw;
+  height: 45vw;
+  background: radial-gradient(circle, rgba(99, 102, 241, 0.08) 0%, rgba(139, 92, 246, 0.04) 50%, transparent 70%);
+  filter: blur(85px);
+  pointer-events: none;
+  z-index: 0;
+  animation: ambientBlobMoveOne 26s ease-in-out infinite alternate;
+}
+
+.dashboard-app-shell::after {
+  content: '';
+  position: fixed;
+  bottom: -15%;
+  right: 8%;
+  width: 42vw;
+  height: 42vw;
+  background: radial-gradient(circle, rgba(168, 85, 247, 0.07) 0%, rgba(56, 189, 248, 0.04) 50%, transparent 70%);
+  filter: blur(85px);
+  pointer-events: none;
+  z-index: 0;
+  animation: ambientBlobMoveTwo 32s ease-in-out infinite alternate;
+}
+
+@keyframes ambientBlobMoveOne {
+  0% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(35px, 25px) scale(1.06);
+  }
+  100% {
+    transform: translate(-25px, 40px) scale(0.96);
+  }
+}
+
+@keyframes ambientBlobMoveTwo {
+  0% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(-30px, -20px) scale(1.04);
+  }
+  100% {
+    transform: translate(20px, -35px) scale(0.97);
+  }
+}
+
+/* Dark theme ambient blob adjustment */
+html[data-theme='dark'] .dashboard-app-shell {
+  background-color: #0f172a;
+  color: #f8fafc;
+}
+
+html[data-theme='dark'] .dashboard-app-shell::before {
+  background: radial-gradient(circle, rgba(99, 102, 241, 0.12) 0%, rgba(139, 92, 246, 0.06) 50%, transparent 70%);
+}
+
+html[data-theme='dark'] .dashboard-app-shell::after {
+  background: radial-gradient(circle, rgba(168, 85, 247, 0.1) 0%, rgba(56, 189, 248, 0.05) 50%, transparent 70%);
+}
+
+/* Light Glass Cards with Subtle Interactions */
+.dashboard-app-shell .glass-panel,
+.dashboard-app-shell .dashboard-panel,
+.dashboard-app-shell .dashboard-stat-card,
+.dashboard-app-shell .dashboard-job-card,
+.dashboard-app-shell .job-card,
+.dashboard-app-shell .settings-card,
+.dashboard-app-shell .profile-hero-panel {
+  background: rgba(255, 255, 255, 0.88) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  border: 1px solid rgba(226, 232, 240, 0.9) !important;
+  border-radius: 18px !important;
+  box-shadow: 0 4px 20px -2px rgba(148, 163, 184, 0.12) !important;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease !important;
+  position: relative;
+  z-index: 1;
+}
+
+html[data-theme='dark'] .dashboard-app-shell .glass-panel,
+html[data-theme='dark'] .dashboard-app-shell .dashboard-panel,
+html[data-theme='dark'] .dashboard-app-shell .dashboard-stat-card,
+html[data-theme='dark'] .dashboard-app-shell .dashboard-job-card,
+html[data-theme='dark'] .dashboard-app-shell .job-card,
+html[data-theme='dark'] .dashboard-app-shell .settings-card,
+html[data-theme='dark'] .dashboard-app-shell .profile-hero-panel {
+  background: rgba(30, 41, 59, 0.75) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* Subtle card hover interaction */
+.dashboard-app-shell .dashboard-panel:hover,
+.dashboard-app-shell .dashboard-stat-card:hover,
+.dashboard-app-shell .dashboard-job-card:hover,
+.dashboard-app-shell .job-card:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 10px 28px -4px rgba(99, 102, 241, 0.14) !important;
+  border-color: rgba(99, 102, 241, 0.3) !important;
+}
+
+/* Sidebar Styling */
+.dashboard-sidebar {
+  background: rgba(255, 255, 255, 0.92) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  border-right: 1px solid rgba(226, 232, 240, 0.8) !important;
+  box-shadow: 2px 0 16px rgba(148, 163, 184, 0.08) !important;
+  z-index: 60;
+}
+
+html[data-theme='dark'] .dashboard-sidebar {
+  background: rgba(15, 23, 42, 0.92) !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 2px 0 16px rgba(0, 0, 0, 0.3) !important;
+}
+
+.dashboard-nav-item.is-active {
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%) !important;
+  color: #ffffff !important;
+  border-color: transparent !important;
+  font-weight: 700 !important;
+  box-shadow: 0 4px 14px rgba(99, 102, 241, 0.3) !important;
+}
+
+/* Welcome Hero Banner */
+.dashboard-welcome-hero {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 2rem;
+  padding: 2.25rem 2.5rem;
+  margin-bottom: 2rem;
+  position: relative;
+  overflow: hidden;
+  border-radius: 20px !important;
+}
+
+.dashboard-welcome-hero::before {
+  content: '';
+  position: absolute;
+  top: -40%;
+  right: -10%;
+  width: 350px;
+  height: 350px;
+  background: radial-gradient(circle, rgba(99, 102, 241, 0.12) 0%, rgba(139, 92, 246, 0.05) 50%, transparent 70%);
+  filter: blur(40px);
+  pointer-events: none;
+}
+
+.dashboard-welcome-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.85rem;
+  border-radius: 9999px;
+  background: rgba(99, 102, 241, 0.1);
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  color: #4f46e5;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  margin-bottom: 0.75rem;
+}
+
+html[data-theme='dark'] .dashboard-welcome-eyebrow {
+  background: rgba(99, 102, 241, 0.2);
+  color: #a5b4fc;
+}
+
+.dashboard-welcome-content h1 {
+  font-size: 2.1rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin-bottom: 0.4rem;
+}
+
+.dashboard-welcome-content p {
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  max-width: 540px;
+  margin-bottom: 1.5rem;
+}
+
+.dashboard-welcome-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  flex-wrap: wrap;
+}
+
+.btn-pill {
+  border-radius: 9999px !important;
+  padding: 0.7rem 1.6rem !important;
+  font-weight: 700 !important;
+}
+
+.dashboard-welcome-badge-card {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  padding: 1.25rem 1.5rem;
+  border-radius: 16px;
+  background: rgba(248, 250, 252, 0.8);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+}
+
+html[data-theme='dark'] .dashboard-welcome-badge-card {
+  background: rgba(15, 23, 42, 0.6);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.dashboard-completion-ring {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  flex: 0 0 auto;
+}
+
+.completion-ring-svg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.completion-ring-svg .ring-bg {
+  fill: none;
+  stroke: rgba(226, 232, 240, 0.8);
+  stroke-width: 3.5;
+}
+
+html[data-theme='dark'] .completion-ring-svg .ring-bg {
+  stroke: rgba(255, 255, 255, 0.15);
+}
+
+.completion-ring-svg .ring-fill {
+  fill: none;
+  stroke: #6366f1;
+  stroke-width: 3.5;
+  stroke-linecap: round;
+  transition: stroke-dasharray 0.6s ease;
+}
+
+.ring-text {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.ring-text strong {
+  font-size: 0.95rem;
+  line-height: 1;
+}
+
+.ring-text small {
+  font-size: 0.62rem;
+  opacity: 0.7;
+}
+
+.completion-meta strong {
+  display: block;
+  font-size: 0.9rem;
+}
+
+.completion-meta span {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.dashboard-table-score {
+  font-weight: 700;
+  color: #6366f1;
+}
+
+.job-card-company {
+  display: block;
+  font-size: 0.85rem;
+  margin-top: 0.15rem;
+  color: var(--text-secondary);
+}
+
+.job-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-top: 0.35rem;
+}
+
+/* Page Load Animation & Accessibility */
+.dashboard-page,
+.dashboard-panel,
+.dashboard-stat-card,
+.dashboard-job-card,
+.job-card {
+  animation: dashboardContentFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes dashboardContentFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Reduced Motion Override for Accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .dashboard-page,
+  .dashboard-panel,
+  .dashboard-stat-card,
+  .dashboard-job-card,
+  .job-card,
+  .dashboard-app-shell::before,
+  .dashboard-app-shell::after {
+    animation: none !important;
+    transition: none !important;
+    transform: none !important;
+  }
+}
+
+@media (max-width: 860px) {
+  .dashboard-welcome-hero {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+/* Primary Orange CTA Button & Accents */
+.btn-primary-orange {
+  background: linear-gradient(135deg, #FF6B1A 0%, #FF8F42 100%) !important;
+  color: #ffffff !important;
+  border: none !important;
+  box-shadow: 0 4px 15px rgba(255, 107, 26, 0.32) !important;
+  transition: all 0.2s ease !important;
+}
+
+.btn-primary-orange:hover {
+  background: linear-gradient(135deg, #E85A09 0%, #FF7E26 100%) !important;
+  box-shadow: 0 6px 20px rgba(255, 107, 26, 0.45) !important;
+  transform: translateY(-1px) !important;
+}
+
+.btn-primary-orange:active {
+  transform: scale(0.98) !important;
+}
+
+.theme-orange .dashboard-stat-icon {
+  background: rgba(255, 107, 26, 0.12) !important;
+  color: #FF6B1A !important;
+}
+
+.match-score-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.65rem;
+  border-radius: 9999px;
+  background: rgba(109, 74, 255, 0.1);
+  color: #6D4AFF;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
