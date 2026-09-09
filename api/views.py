@@ -21,8 +21,8 @@ from .serializers import (
 from .services.matcher import calculate_match_score
 from .authentication import generate_dev_token
 
-SUPABASE_URL = getattr(settings, 'SUPABASE_URL', 'https://yqdzwruwcgsigxmofftt.supabase.co')
-SUPABASE_KEY = getattr(settings, 'SUPABASE_ANON_KEY', '')
+SUPABASE_URL = (getattr(settings, 'SUPABASE_URL', None) or 'https://yqdzwruwcgsigxmofftt.supabase.co').rstrip('/')
+SUPABASE_KEY = getattr(settings, 'SUPABASE_ANON_KEY', None) or 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlxZHp3cnV3Y2dzaWd4bW9mZnR0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg2NzE2OTYsImV4cCI6MjA4NDI0NzY5Nn0.2U5GoONA3URwqmqeN3U9plWm6ajAtxmG4bKZxPK4NMI'
 
 
 # =============================================================================

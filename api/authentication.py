@@ -7,7 +7,7 @@ from rest_framework import authentication, exceptions
 from jwt import PyJWKSet
 from .models import Profiles
 
-SUPABASE_URL = getattr(settings, 'SUPABASE_URL', 'https://yqdzwruwcgsigxmofftt.supabase.co').rstrip('/')
+SUPABASE_URL = (getattr(settings, 'SUPABASE_URL', None) or 'https://yqdzwruwcgsigxmofftt.supabase.co').rstrip('/')
 JWKS_URL = f"{SUPABASE_URL}/auth/v1/.well-known/jwks.json"
 
 _JWKS_CACHE = {"jwks": None, "fetched_at": 0}

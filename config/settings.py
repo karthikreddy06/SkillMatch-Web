@@ -74,9 +74,12 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Database configuration connecting to existing Supabase PostgreSQL
 # conn_max_age=0 ensures connections are closed at the end of each request,
 # preventing exhaustion of Supabase session pooler (max 15 clients)
+DEFAULT_DB_URL = 'postgresql://postgres.yqdzwruwcgsigxmofftt:4AtH4vHM9mfF0s7q@aws-1-ap-south-1.pooler.supabase.com:5432/postgres'
+db_url = os.getenv('DATABASE_URL') or DEFAULT_DB_URL
+
 DATABASES = {
     'default': dj_database_url.config(
-        default=os.getenv('DATABASE_URL'),
+        default=db_url,
         conn_max_age=0,
         ssl_require=False
     )
@@ -172,9 +175,11 @@ REST_FRAMEWORK = {
     ],
 }
 
-# Supabase integration credentials
-SUPABASE_URL = os.getenv('SUPABASE_URL', '')
-SUPABASE_ANON_KEY = os.getenv('SUPABASE_ANON_KEY', '')
+DEFAULT_SUPABASE_URL = 'https://yqdzwruwcgsigxmofftt.supabase.co'
+DEFAULT_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlxZHp3cnV3Y2dzaWd4bW9mZnR0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg2NzE2OTYsImV4cCI6MjA4NDI0NzY5Nn0.2U5GoONA3URwqmqeN3U9plWm6ajAtxmG4bKZxPK4NMI'
+
+SUPABASE_URL = os.getenv('SUPABASE_URL') or DEFAULT_SUPABASE_URL
+SUPABASE_ANON_KEY = os.getenv('SUPABASE_ANON_KEY') or DEFAULT_SUPABASE_ANON_KEY
 SUPABASE_SERVICE_ROLE_KEY = os.getenv('SUPABASE_SERVICE_ROLE_KEY', '')
 SUPABASE_JWT_SECRET = os.getenv('SUPABASE_JWT_SECRET', '')
-FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:5173')
+FRONTEND_URL = os.getenv('FRONTEND_URL') or 'http://localhost:5173'
