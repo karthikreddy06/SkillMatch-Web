@@ -1,0 +1,17 @@
+import React from 'react';
+import { Briefcase, Clock3, FileText, Mail, MapPin, Pencil, Phone, UserRound } from 'lucide-react';
+import { Profile } from '../types';
+
+interface ProfilePageProps { user: Profile | null; onEdit: () => void; }
+
+export const ProfilePage: React.FC<ProfilePageProps> = ({ user, onEdit }) => {
+  const fields = [user?.full_name, user?.headline, user?.location, user?.skills?.length, user?.resume_url];
+  const completion = user ? Math.round((fields.filter(Boolean).length / fields.length) * 100) : 0;
+  const displayName = user?.full_name || user?.company_name || 'Your profile';
+  return <div className="dashboard-page profile-page">
+    <header className="dashboard-page-header"><div><span className="dashboard-eyebrow">Account</span><h1>Profile</h1><p>Your professional identity and matching information.</p></div><button className="btn btn-primary" onClick={onEdit}><Pencil size={15} /> Edit Profile</button></header>
+    <section className="profile-hero-panel dashboard-panel"><div className="profile-page-avatar">{user?.avatar_url ? <img src={user.avatar_url} alt={displayName} /> : displayName[0].toUpperCase()}</div><div className="profile-hero-copy"><h2>{displayName}</h2><p>{user?.headline || (user?.role === 'employer' ? 'Company profile' : 'Add a professional title')}</p>{user?.location && <span><MapPin size={14} /> {user.location}</span>}</div><div className="profile-completion-card"><strong>{completion}%</strong><span>Profile completion</span><div><i style={{ width: `${completion}%` }} /></div></div></section>
+    <div className="profile-detail-grid"><section className="dashboard-panel"><div className="dashboard-panel-heading"><div><h2>About</h2><p>How employers and candidates see your profile.</p></div><UserRound size={18} /></div><p className="profile-body-copy">{user?.bio || user?.about_company || 'Add a short bio to tell people about your experience, strengths, and what you are looking for.'}</p><div className="profile-info-list"><div><Mail size={15} /><span>{user?.email || 'Email not available'}</span></div>{user?.phone && <div><Phone size={15} /><span>{user.phone}</span></div>}<div><Briefcase size={15} /><span>{user?.preferred_job_type || 'Preferred job type not set'}</span></div><div><Clock3 size={15} /><span>{user?.preferred_shift || 'Preferred shift not set'}</span></div></div></section><section className="dashboard-panel"><div className="dashboard-panel-heading"><div><h2>Skills & Experience</h2><p>Signals used for SkillMatch recommendations.</p></div></div><div className="profile-skill-cloud">{user?.skills?.length ? user.skills.map((skill) => <span key={skill}>{skill}</span>) : <p className="dashboard-muted">No skills added yet.</p>}</div><div className="profile-experience-row"><span>Experience level</span><strong>{user?.experience_level || 'Not specified'}</strong></div><div className="profile-experience-row"><span>Experience</span><strong>{user?.experience_years ? `${user.experience_years} years` : 'Not specified'}</strong></div></section></div>
+    <section className="dashboard-panel profile-resume-panel"><div className="dashboard-panel-heading"><div><h2>Resume</h2><p>Keep your latest resume attached to applications.</p></div><FileText size={18} /></div>{user?.resume_url ? <a className="profile-resume-link" href={user.resume_url} target="_blank" rel="noreferrer"><FileText size={17} /> Open attached resume</a> : <p className="dashboard-muted">No resume uploaded yet. Edit your profile to attach one.</p>}</section>
+  </div>;
+};
