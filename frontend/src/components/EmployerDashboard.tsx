@@ -60,8 +60,6 @@ export const EmployerDashboard: React.FC<EmployerDashboardProps> = ({ onOpenPost
     return { text: 'Good night', emoji: '🌙' };
   }, []);
 
-  if (isLoading) return <div className="dashboard-page dashboard-loading">Loading hiring activity...</div>;
-
   return (
     <div className="dashboard-page employer-overview-page">
       {/* Hero Welcome Banner */}
@@ -85,12 +83,16 @@ export const EmployerDashboard: React.FC<EmployerDashboardProps> = ({ onOpenPost
         </div>
         <div className="dashboard-welcome-badge-card">
           <div className="employer-hero-stat">
-            <strong>{stats.active_jobs}</strong>
+            {isLoading ? (
+              <span className="skeleton-box" style={{ width: '40px', height: '28px', margin: '4px 0' }} />
+            ) : (
+              <strong>{stats.active_jobs}</strong>
+            )}
             <small>Active Listings</small>
           </div>
           <div className="completion-meta">
             <strong>Hiring Activity</strong>
-            <span>{stats.total_applicants} applicants across active roles</span>
+            <span>{isLoading ? 'Loading applicants...' : `${stats.total_applicants} applicants across active roles`}</span>
           </div>
         </div>
       </section>
@@ -109,7 +111,11 @@ export const EmployerDashboard: React.FC<EmployerDashboardProps> = ({ onOpenPost
             </span>
             <div>
               <span className="dashboard-stat-label">{label}</span>
-              <strong>{value}</strong>
+              {isLoading ? (
+                <span className="skeleton-box" style={{ width: '45px', height: '24px', margin: '4px 0' }} />
+              ) : (
+                <strong>{value}</strong>
+              )}
               <small>{note}</small>
             </div>
           </article>

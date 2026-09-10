@@ -3,7 +3,7 @@ import requests
 import datetime
 import math
 from django.conf import settings
-from django.db.models import Q
+from django.db.models import Q, Count
 from django.utils import timezone
 from rest_framework import status, permissions
 from rest_framework.decorators import api_view, permission_classes
@@ -23,6 +23,43 @@ from .authentication import generate_dev_token
 
 SUPABASE_URL = (getattr(settings, 'SUPABASE_URL', None) or 'https://yqdzwruwcgsigxmofftt.supabase.co').rstrip('/')
 SUPABASE_KEY = getattr(settings, 'SUPABASE_ANON_KEY', None) or 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlxZHp3cnV3Y2dzaWd4bW9mZnR0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg2NzE2OTYsImV4cCI6MjA4NDI0NzY5Nn0.2U5GoONA3URwqmqeN3U9plWm6ajAtxmG4bKZxPK4NMI'
+
+
+def build_job_serialization_context(request, jobs_qs):
+    """
+    Pre-fetch contextual maps (applicant counts, saved status, applied status)
+    in bulk queries to avoid N+1 queries during job list serialization.
+    """
+    context = {'request': request}
+    jobs_list = list(jobs_qs)
+    job_ids = [job.id for job in jobs_list]
+    if not job_ids:
+        return context
+
+    # 1. Bulk count applicants
+    counts = dict(
+        Applications.objects.filter(job_id__in=job_ids)
+        .values('job_id')
+        .annotate(total=Count('id'))
+        .values_list('job_id', 'total')
+    )
+    context['applicant_counts'] = {str(k): v for k, v in counts.items()}
+
+    # 2. Bulk query saved and applied job IDs for authenticated user
+    if request and hasattr(request, 'user') and request.user and request.user.is_authenticated:
+        user_id = request.user.id
+        saved_set = set(
+            str(jid) for jid in SavedJobs.objects.filter(user_id=user_id, job_id__in=job_ids)
+            .values_list('job_id', flat=True)
+        )
+        applied_set = set(
+            str(jid) for jid in Applications.objects.filter(applicant_id=user_id, job_id__in=job_ids)
+            .values_list('job_id', flat=True)
+        )
+        context['saved_job_ids'] = saved_set
+        context['applied_job_ids'] = applied_set
+
+    return context
 
 
 # =============================================================================
@@ -538,7 +575,7 @@ def job_list_create(request):
     List jobs with server-side pagination & filtering, or create a new job opening (Employer only).
     """
     if request.method == 'GET':
-        queryset = Jobs.objects.all().order_by('-created_at')
+        queryset = Jobs.objects.all().select_related('employer').order_by('-created_at')
 
         status_param = request.query_params.get('status')
         queryset = queryset.filter(status=status_param) if status_param else queryset.filter(status='active')
@@ -586,9 +623,10 @@ def job_list_create(request):
         total_count = queryset.count()
         start = (page - 1) * page_size
         end = start + page_size
-        paged_jobs = queryset[start:end]
+        paged_jobs = list(queryset[start:end])
 
-        serializer = JobSerializer(paged_jobs, many=True, context={'request': request})
+        context = build_job_serialization_context(request, paged_jobs)
+        serializer = JobSerializer(paged_jobs, many=True, context=context)
         
         # Attach deterministic match score if authenticated candidate
         if request.user and request.user.is_authenticated and request.user.is_seeker:
@@ -635,12 +673,13 @@ def job_detail(request, pk):
     """
     Retrieve job (GET) or update/delete job (PATCH/DELETE, Job Owner only).
     """
-    job = Jobs.objects.filter(id=pk).first()
+    job = Jobs.objects.filter(id=pk).select_related('employer').first()
     if not job:
         return Response({'error': 'Job not found'}, status=status.HTTP_404_NOT_FOUND)
 
     if request.method == 'GET':
-        job_data = JobSerializer(job, context={'request': request}).data
+        context = build_job_serialization_context(request, [job])
+        job_data = JobSerializer(job, context=context).data
         if request.user and request.user.is_authenticated and request.user.is_seeker:
             match_res = calculate_match_score(job, request.user)
             job_data['match_score'] = match_res['score']
@@ -699,11 +738,12 @@ def job_recommendations(request):
     except (TypeError, ValueError):
         radius_km = 25
 
-    jobs = Jobs.objects.filter(status='active').exclude(id__in=applied_ids)
+    jobs = list(Jobs.objects.filter(status='active').exclude(id__in=applied_ids).select_related('employer'))
+    context = build_job_serialization_context(request, jobs)
 
     scored_jobs = []
     for job in jobs:
-        job_data = JobSerializer(job, context={'request': request}).data
+        job_data = JobSerializer(job, context=context).data
         if profile:
             match_res = calculate_match_score(job, profile)
             distance_km = match_res['breakdown'].get('distance_km')
@@ -742,8 +782,10 @@ def application_list_create(request):
             return Response({'error': 'Only candidates can view their application portfolio here'}, status=status.HTTP_403_FORBIDDEN)
 
         # Strictly filter by authenticated candidate ID
-        apps = Applications.objects.filter(applicant_id=request.user.id).select_related('job', 'applicant').order_by('-created_at')
-        serializer = ApplicationSerializer(apps, many=True)
+        apps = list(Applications.objects.filter(applicant_id=request.user.id).select_related('job', 'applicant', 'job__employer').order_by('-created_at'))
+        job_objs = [app.job for app in apps if app.job]
+        context = build_job_serialization_context(request, job_objs)
+        serializer = ApplicationSerializer(apps, many=True, context=context)
         return Response(serializer.data)
 
     elif request.method == 'POST':
@@ -805,14 +847,16 @@ def employer_applicants(request):
     job_id = request.query_params.get('job_id')
     status_filter = request.query_params.get('status')
 
-    apps_query = Applications.objects.filter(job__employer_id=employer_id).select_related('job', 'applicant').order_by('-created_at')
+    apps_query = list(Applications.objects.filter(job__employer_id=employer_id).select_related('job', 'applicant', 'job__employer').order_by('-created_at'))
 
     if job_id:
-        apps_query = apps_query.filter(job_id=job_id)
+        apps_query = [app for app in apps_query if str(app.job_id) == str(job_id)]
     if status_filter and status_filter != 'all':
-        apps_query = apps_query.filter(status=status_filter)
+        apps_query = [app for app in apps_query if app.status == status_filter]
 
-    serializer = ApplicationSerializer(apps_query, many=True)
+    job_objs = [app.job for app in apps_query if app.job]
+    context = build_job_serialization_context(request, job_objs)
+    serializer = ApplicationSerializer(apps_query, many=True, context=context)
     return Response(serializer.data)
 
 
@@ -940,6 +984,7 @@ def application_messages(request, application_id):
 def chat_inbox(request):
     """
     List conversation inbox for the authenticated user (Candidate or Employer).
+    Optimized to fetch all inbox items in bulk queries.
     """
     if not request.user or not request.user.is_authenticated:
         return Response({'error': 'Authentication required'}, status=status.HTTP_401_UNAUTHORIZED)
@@ -948,14 +993,37 @@ def chat_inbox(request):
     is_employer = request.user.is_employer
 
     if is_employer:
-        apps = Applications.objects.filter(job__employer_id=user_id).select_related('job', 'applicant')
+        apps = list(Applications.objects.filter(job__employer_id=user_id).select_related('job', 'applicant', 'job__employer'))
     else:
-        apps = Applications.objects.filter(applicant_id=user_id).select_related('job', 'applicant')
+        apps = list(Applications.objects.filter(applicant_id=user_id).select_related('job', 'applicant', 'job__employer'))
+
+    if not apps:
+        return Response([])
+
+    app_ids = [app.id for app in apps]
+
+    # Pre-fetch unread counts in 1 bulk query
+    unread_counts = dict(
+        Messages.objects.filter(application_id__in=app_ids, read=False)
+        .exclude(sender_id=user_id)
+        .values('application_id')
+        .annotate(total=Count('id'))
+        .values_list('application_id', 'total')
+    )
+
+    # Pre-fetch latest message for each application in 1 bulk query
+    latest_messages = {}
+    msgs = Messages.objects.filter(application_id__in=app_ids).order_by('application_id', '-created_at')
+    for msg in msgs:
+        app_str = str(msg.application_id)
+        if app_str not in latest_messages:
+            latest_messages[app_str] = msg
 
     inbox = []
     for app in apps:
-        last_msg = Messages.objects.filter(application=app).order_by('-created_at').first()
-        unread_count = Messages.objects.filter(application=app, read=False).exclude(sender_id=user_id).count()
+        app_id_str = str(app.id)
+        last_msg = latest_messages.get(app_id_str)
+        unread_count = unread_counts.get(app.id, 0)
 
         other_party = app.applicant if is_employer else app.job.employer
         contact_name = 'User'
@@ -1041,10 +1109,13 @@ def list_saved_jobs(request):
     if not request.user or not request.user.is_authenticated:
         return Response({'error': 'Authentication required'}, status=status.HTTP_401_UNAUTHORIZED)
 
-    saved = SavedJobs.objects.filter(user=request.user).select_related('job', 'job__employer')
+    saved = list(SavedJobs.objects.filter(user=request.user).select_related('job', 'job__employer'))
+    job_objs = [item.job for item in saved if item.job]
+    context = build_job_serialization_context(request, job_objs)
+
     results = []
     for item in saved:
-        item_data = SavedJobSerializer(item, context={'request': request}).data
+        item_data = SavedJobSerializer(item, context=context).data
         if item.job and request.user.is_seeker:
             match_res = calculate_match_score(item.job, request.user)
             distance_km = match_res['breakdown'].get('distance_km')
@@ -1098,6 +1169,7 @@ def list_recently_viewed(request):
 def employer_dashboard_stats(request):
     """
     Aggregate metrics for employer dashboard. Locked strictly to authenticated employer.
+    Optimized to compute statistics in bulk queries.
     """
     if not request.user or not request.user.is_authenticated:
         return Response({'error': 'Authentication required'}, status=status.HTTP_401_UNAUTHORIZED)
@@ -1106,20 +1178,28 @@ def employer_dashboard_stats(request):
         return Response({'error': 'Forbidden: Employer privileges required'}, status=status.HTTP_403_FORBIDDEN)
 
     employer_id = request.user.id
-    employer_jobs = Jobs.objects.filter(employer_id=employer_id)
-    active_jobs_count = employer_jobs.filter(status='active').count()
+    employer_jobs = list(
+        Jobs.objects.filter(employer_id=employer_id).annotate(total_applicants_count=Count('applications'))
+    )
+    active_jobs_count = sum(1 for j in employer_jobs if j.status == 'active')
 
-    job_ids = list(employer_jobs.values_list('id', flat=True))
-    total_applicants = Applications.objects.filter(job_id__in=job_ids).count()
+    job_ids = [j.id for j in employer_jobs]
+    total_applicants = sum(getattr(j, 'total_applicants_count', 0) for j in employer_jobs)
 
     one_day_ago = timezone.now() - datetime.timedelta(days=1)
-    new_today = Applications.objects.filter(job_id__in=job_ids, created_at__gte=one_day_ago).count()
-    shortlisted_count = Applications.objects.filter(job_id__in=job_ids, status='shortlisted').count()
-    interview_count = Applications.objects.filter(job_id__in=job_ids, status='interview').count()
+    new_today = Applications.objects.filter(job_id__in=job_ids, created_at__gte=one_day_ago).count() if job_ids else 0
+    shortlisted_count = Applications.objects.filter(job_id__in=job_ids, status='shortlisted').count() if job_ids else 0
+    interview_count = Applications.objects.filter(job_id__in=job_ids, status='interview').count() if job_ids else 0
+
+    new_today_per_job = dict(
+        Applications.objects.filter(job_id__in=job_ids, created_at__gte=one_day_ago)
+        .values('job_id')
+        .annotate(total=Count('id'))
+        .values_list('job_id', 'total')
+    ) if job_ids else {}
 
     jobs_summary = []
     for job in employer_jobs:
-        job_apps = Applications.objects.filter(job=job)
         jobs_summary.append({
             'id': job.id,
             'title': job.title,
@@ -1127,8 +1207,8 @@ def employer_dashboard_stats(request):
             'created_at': job.created_at,
             'location': job.location,
             'salary_range': job.salary_range,
-            'applicants_count': job_apps.count(),
-            'new_today_count': job_apps.filter(created_at__gte=one_day_ago).count(),
+            'applicants_count': getattr(job, 'total_applicants_count', 0),
+            'new_today_count': new_today_per_job.get(job.id, 0),
         })
 
     return Response({

@@ -153,7 +153,11 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
             </span>
             <div>
               <span className="dashboard-stat-label">{label}</span>
-              <strong>{value}</strong>
+              {isLoading ? (
+                <span className="skeleton-box" style={{ width: '45px', height: '24px', margin: '4px 0' }} />
+              ) : (
+                <strong>{value}</strong>
+              )}
               <small>{note}</small>
             </div>
           </article>
@@ -199,7 +203,17 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
             <Activity size={18} className="panel-accent-icon" />
           </div>
           {isLoading ? (
-            <p className="dashboard-muted">Loading activity...</p>
+            <div className="dashboard-activity-list">
+              {[1, 2, 3].map((idx) => (
+                <div className="dashboard-activity-item" key={idx}>
+                  <span className="skeleton-box" style={{ width: '16px', height: '16px', borderRadius: '50%' }} />
+                  <div style={{ flex: 1 }}>
+                    <span className="skeleton-box" style={{ width: '140px', height: '14px' }} />
+                    <span className="skeleton-box" style={{ width: '90px', height: '12px', marginTop: '4px' }} />
+                  </div>
+                </div>
+              ))}
+            </div>
           ) : (
             <div className="dashboard-activity-list">
               {applications.slice(0, 4).map((application) => (
@@ -311,26 +325,38 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
               </tr>
             </thead>
             <tbody>
-              {applications.slice(0, 5).map((application) => (
-                <tr key={application.id}>
-                  <td>
-                    <strong>{application.job?.title || 'Job'}</strong>
-                  </td>
-                  <td>{application.job?.company_name || 'Company'}</td>
-                  <td>{application.applied_at ? new Date(application.applied_at).toLocaleDateString() : 'Recently'}</td>
-                  <td>
-                    <span className="dashboard-table-score">{application.match_score || 0}%</span>
-                  </td>
-                  <td>
-                    <span className={`dashboard-status ${application.status}`}>
-                      {application.status === 'pending' ? 'Under review' : application.status}
-                    </span>
-                  </td>
-                </tr>
-              ))}
+              {isLoading ? (
+                [1, 2, 3].map((rowIdx) => (
+                  <tr key={rowIdx}>
+                    <td><span className="skeleton-box" style={{ width: '130px', height: '14px' }} /></td>
+                    <td><span className="skeleton-box" style={{ width: '100px', height: '14px' }} /></td>
+                    <td><span className="skeleton-box" style={{ width: '80px', height: '14px' }} /></td>
+                    <td><span className="skeleton-box" style={{ width: '40px', height: '14px' }} /></td>
+                    <td><span className="skeleton-box" style={{ width: '70px', height: '14px' }} /></td>
+                  </tr>
+                ))
+              ) : (
+                applications.slice(0, 5).map((application) => (
+                  <tr key={application.id}>
+                    <td>
+                      <strong>{application.job?.title || 'Job'}</strong>
+                    </td>
+                    <td>{application.job?.company_name || 'Company'}</td>
+                    <td>{application.applied_at ? new Date(application.applied_at).toLocaleDateString() : 'Recently'}</td>
+                    <td>
+                      <span className="dashboard-table-score">{application.match_score || 0}%</span>
+                    </td>
+                    <td>
+                      <span className={`dashboard-status ${application.status}`}>
+                        {application.status === 'pending' ? 'Under review' : application.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
-          {!applications.length && (
+          {!isLoading && !applications.length && (
             <div className="dashboard-empty">No applications submitted yet. Explore recommended jobs above.</div>
           )}
         </div>

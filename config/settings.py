@@ -72,15 +72,14 @@ TEMPLATES = [
 WSGI_APPLICATION = 'config.wsgi.application'
 
 # Database configuration connecting to existing Supabase PostgreSQL
-# conn_max_age=0 ensures connections are closed at the end of each request,
-# preventing exhaustion of Supabase session pooler (max 15 clients)
+# conn_max_age=60 enables connection reuse across requests, avoiding TLS setup overhead per request
 DEFAULT_DB_URL = 'postgresql://postgres.yqdzwruwcgsigxmofftt:4AtH4vHM9mfF0s7q@aws-1-ap-south-1.pooler.supabase.com:5432/postgres'
 db_url = os.getenv('DATABASE_URL') or DEFAULT_DB_URL
 
 DATABASES = {
     'default': dj_database_url.config(
         default=db_url,
-        conn_max_age=0,
+        conn_max_age=int(os.getenv('CONN_MAX_AGE', '60')),
         ssl_require=False
     )
 }

@@ -43,15 +43,26 @@ class JobSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'created_at']
 
     def get_applicants_count(self, obj):
+        counts_map = self.context.get('applicant_counts')
+        if counts_map is not None:
+            return counts_map.get(str(obj.id), 0)
+        if hasattr(obj, 'precalculated_applicants_count'):
+            return obj.precalculated_applicants_count
         return obj.applications.count()
 
     def get_is_saved(self, obj):
+        saved_set = self.context.get('saved_job_ids')
+        if saved_set is not None:
+            return str(obj.id) in saved_set
         request = self.context.get('request')
         if request and request.user and request.user.is_authenticated:
             return SavedJobs.objects.filter(job=obj, user=request.user).exists()
         return False
 
     def get_has_applied(self, obj):
+        applied_set = self.context.get('applied_job_ids')
+        if applied_set is not None:
+            return str(obj.id) in applied_set
         request = self.context.get('request')
         if request and request.user and request.user.is_authenticated:
             return Applications.objects.filter(job=obj, applicant=request.user).exists()
@@ -87,6 +98,9 @@ class MessageSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'created_at']
 
     def get_sender_name(self, obj):
+        senders_map = self.context.get('senders_map')
+        if senders_map is not None:
+            return senders_map.get(str(obj.sender_id), 'User')
         if obj.sender_id:
             profile = Profiles.objects.filter(id=obj.sender_id).first()
             if profile:
@@ -104,7 +118,7 @@ class SavedJobSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
-        job_data = JobSerializer(instance.job, context=self.context).data if instance.job else None
+        job_data = data.get('job_details')
         data['saved_job_id'] = str(instance.id)
         data['user_id'] = str(instance.user_id) if instance.user_id else None
         data['job_id'] = str(instance.job_id) if instance.job_id else None
