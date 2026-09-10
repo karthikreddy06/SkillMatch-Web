@@ -75,6 +75,39 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     const initAuth = async () => {
       try {
+        // Handle Supabase email confirmation redirect callbacks (#access_token=... or ?code=... or #error=...)
+        const hash = window.location.hash;
+        const search = window.location.search;
+
+        if (hash || search) {
+          const hashParams = new URLSearchParams(hash.startsWith('#') ? hash.substring(1) : '');
+          const searchParams = new URLSearchParams(search);
+
+          const accessToken = hashParams.get('access_token') || searchParams.get('access_token');
+          const refreshToken = hashParams.get('refresh_token') || searchParams.get('refresh_token');
+          const errorDesc = hashParams.get('error_description') || searchParams.get('error_description') || hashParams.get('error');
+
+          if (accessToken) {
+            localStorage.setItem('skillmatch_token', accessToken);
+            if (refreshToken) {
+              localStorage.setItem('skillmatch_refresh_token', refreshToken);
+            }
+            try {
+              const freshProfile = await api.getMe();
+              setUser(freshProfile);
+              localStorage.setItem('skillmatch_user', JSON.stringify(freshProfile));
+            } catch (err) {
+              console.error('Failed to load profile for verified token:', err);
+            }
+            window.history.replaceState(null, '', window.location.pathname);
+            setIsLoading(false);
+            return;
+          } else if (errorDesc) {
+            console.error('Auth verification error from URL:', errorDesc);
+            window.history.replaceState(null, '', window.location.pathname);
+          }
+        }
+
         const savedUserStr = localStorage.getItem('skillmatch_user');
         const token = localStorage.getItem('skillmatch_token');
         if (savedUserStr && token) {

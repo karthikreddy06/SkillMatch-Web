@@ -141,13 +141,24 @@ if cors_allowed_env:
 else:
     CORS_ALLOWED_ORIGINS = [
         'http://localhost:5173',
+        'http://localhost:5174',
         'http://127.0.0.1:5173',
+        'http://127.0.0.1:5174',
         'http://localhost:3000',
         'http://127.0.0.1:3000',
         'http://localhost:8000',
         'http://127.0.0.1:8000',
     ]
     CORS_ALLOW_ALL_ORIGINS = False
+
+CSRF_TRUSTED_ORIGINS = [
+    'http://localhost:5173',
+    'http://localhost:5174',
+    'http://127.0.0.1:5173',
+    'http://127.0.0.1:5174',
+    'http://localhost:8000',
+    'http://127.0.0.1:8000',
+]
 
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_HEADERS = [
@@ -181,4 +192,8 @@ SUPABASE_URL = os.getenv('SUPABASE_URL') or DEFAULT_SUPABASE_URL
 SUPABASE_ANON_KEY = os.getenv('SUPABASE_ANON_KEY') or DEFAULT_SUPABASE_ANON_KEY
 SUPABASE_SERVICE_ROLE_KEY = os.getenv('SUPABASE_SERVICE_ROLE_KEY', '')
 SUPABASE_JWT_SECRET = os.getenv('SUPABASE_JWT_SECRET', '')
-FRONTEND_URL = os.getenv('FRONTEND_URL') or 'http://localhost:5173'
+FRONTEND_URL = os.getenv('FRONTEND_URL') or os.getenv('VITE_APP_URL') or 'http://localhost:5174'
+
+SUPABASE_CONNECT_TIMEOUT = int(os.getenv('SUPABASE_CONNECT_TIMEOUT', '5'))
+SUPABASE_READ_TIMEOUT = int(os.getenv('SUPABASE_READ_TIMEOUT', '25'))
+

@@ -10,9 +10,13 @@ RUN npm ci
 # Copy frontend source code
 COPY . .
 
-# Build argument for API base URL (default: http://localhost:8000/api)
-ARG VITE_API_BASE_URL=http://localhost:8000/api
+# Build arguments for production configuration
+ARG VITE_APP_URL=https://skillmatch-frontend-spk8.onrender.com
+ARG VITE_API_BASE_URL=https://skillmatch-backend-uo7v.onrender.com/api
+ARG VITE_API_URL=https://skillmatch-backend-uo7v.onrender.com/api
+ENV VITE_APP_URL=$VITE_APP_URL
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
+ENV VITE_API_URL=$VITE_API_URL
 
 # Build Vite dist output
 RUN npm run build

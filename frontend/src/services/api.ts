@@ -10,7 +10,7 @@ import {
   ApplicationStatus,
 } from '../types';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 
 class ApiService {
   private getToken(): string | null {
@@ -34,27 +34,48 @@ class ApiService {
     options: RequestInit = {}
   ): Promise<T> {
     const url = `${API_BASE_URL}${endpoint}`;
-    const response = await fetch(url, {
-      ...options,
-      headers: {
-        ...this.getHeaders(
-          options.body instanceof FormData ? null : 'application/json'
-        ),
-        ...(options.headers || {}),
-      },
-    });
+    let response: Response;
+    try {
+      response = await fetch(url, {
+        ...options,
+        headers: {
+          ...this.getHeaders(
+            options.body instanceof FormData ? null : 'application/json'
+          ),
+          ...(options.headers || {}),
+        },
+      });
+    } catch (networkError: any) {
+      throw new Error(
+        'Unable to connect to the backend server. Please check your connection or server status.'
+      );
+    }
 
     if (!response.ok) {
-      let errorMsg = `HTTP Error ${response.status}`;
+      let errorMsg = '';
       try {
         const errorData = await response.json();
         errorMsg =
           errorData.error ||
           errorData.detail ||
           errorData.message ||
-          JSON.stringify(errorData);
+          (typeof errorData === 'string' ? errorData : '');
       } catch {
-        // use default errorMsg
+        // failed to parse JSON error response
+      }
+
+      if (!errorMsg) {
+        if (response.status === 401) {
+          errorMsg = 'Your session has expired. Please sign in again.';
+        } else if (response.status === 403) {
+          errorMsg = 'Permission denied.';
+        } else if (response.status === 504) {
+          errorMsg = 'Storage service timed out. Please try again.';
+        } else if (response.status >= 500) {
+          errorMsg = 'Server error. Please try again.';
+        } else {
+          errorMsg = `HTTP Error ${response.status}`;
+        }
       }
       throw new Error(errorMsg);
     }
@@ -90,6 +111,10 @@ class ApiService {
     fullName?: string,
     companyName?: string
   ) {
+    const redirectUrl =
+      import.meta.env.VITE_APP_URL ||
+      (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5174');
+
     const data = await this.request<{
       success?: boolean;
       message?: string;
@@ -105,6 +130,7 @@ class ApiService {
         role,
         full_name: fullName,
         company_name: companyName,
+        email_redirect_to: redirectUrl,
       }),
     });
     if (data.session?.access_token) {

@@ -95,7 +95,7 @@ class SupabaseAuthentication(authentication.BaseAuthentication):
                 )
 
             elif alg in ['HS256', 'HS384', 'HS512']:
-                jwt_secret = getattr(settings, 'SUPABASE_JWT_SECRET', '') or getattr(settings, 'SECRET_KEY', '') or ''
+                jwt_secret = getattr(settings, 'SUPABASE_JWT_SECRET', '') or getattr(settings, 'SECRET_KEY', '')
 
                 if not jwt_secret:
                     raise exceptions.AuthenticationFailed('SUPABASE_JWT_SECRET is not configured')

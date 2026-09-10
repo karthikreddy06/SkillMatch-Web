@@ -32,9 +32,29 @@ if cors_env:
     CORS_ALLOWED_ORIGINS = [orig.strip() for orig in cors_env.split(',') if orig.strip()]
     CORS_ALLOW_ALL_ORIGINS = False
 else:
+    CORS_ALLOWED_ORIGINS = [
+        'https://skillmatch-frontend-spk8.onrender.com',
+        'http://localhost:5173',
+        'http://localhost:5174',
+        'http://127.0.0.1:5173',
+        'http://127.0.0.1:5174',
+        'http://localhost:3000',
+        'http://127.0.0.1:3000',
+    ]
     CORS_ALLOW_ALL_ORIGINS = False
+
+CSRF_TRUSTED_ORIGINS = [
+    'https://skillmatch-frontend-spk8.onrender.com',
+    'https://skillmatch-backend-uo7v.onrender.com',
+    'http://localhost:5173',
+    'http://localhost:5174',
+    'http://127.0.0.1:5173',
+    'http://127.0.0.1:5174',
+]
 
 # Static files handling with WhiteNoise if installed
 if 'whitenoise.middleware.WhiteNoiseMiddleware' not in MIDDLEWARE:
     MIDDLEWARE.insert(1, 'whitenoise.middleware.WhiteNoiseMiddleware')
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+FRONTEND_URL = os.getenv('FRONTEND_URL') or os.getenv('VITE_APP_URL') or 'https://skillmatch-frontend-spk8.onrender.com'
