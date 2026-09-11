@@ -80,6 +80,12 @@ export const ChatInboxView: React.FC<ChatInboxViewProps> = ({ onOpenChat }) => {
               Conversations are initiated automatically when an application is submitted or when an interview invitation is dispatched.
             </p>
           </div>
+        ) : filteredConversations.length === 0 ? (
+          <div className="glass-panel" style={{ textAlign: 'center', padding: '3rem 2rem', maxWidth: '600px', margin: '0 auto' }}>
+            <Search size={42} color="var(--text-muted)" style={{ marginBottom: '1rem' }} />
+            <h3>No matching conversations</h3>
+            <p style={{ color: 'var(--text-secondary)', marginTop: '0.5rem' }}>Try a different name, job title, or message keyword.</p>
+          </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             {filteredConversations.map((conv) => (

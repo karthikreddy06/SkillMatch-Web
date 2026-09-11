@@ -159,8 +159,8 @@ export const SkillMatchScene: React.FC = () => {
         <div className="geom-radar-pulse pulse-running" />
       </div>
 
-      {/* Dynamic SVG Connecting Vectors */}
-      <svg className="unboxed-svg-vectors" viewBox="0 0 1100 520" preserveAspectRatio="none">
+      {/* Dynamic SVG Connecting Vectors (Desktop & Tablet) */}
+      <svg className="unboxed-svg-vectors vectors-desktop" viewBox="0 0 1100 520" preserveAspectRatio="none">
         <defs>
           <linearGradient id="studioBeamGrad" x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" stopColor="#4F46E5" stopOpacity="0.85" />
@@ -188,6 +188,37 @@ export const SkillMatchScene: React.FC = () => {
 
         <path d="M 550 270 C 660 320, 760 380, 850 410" className="vector-base" />
         <path d="M 550 270 C 660 320, 760 380, 850 410" className="vector-active" style={{ animationDelay: '2.1s' }} />
+      </svg>
+
+      {/* Dynamic SVG Connecting Vectors (Mobile Flow) */}
+      <svg className="unboxed-svg-vectors vectors-mobile" viewBox="0 0 353 340" preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="studioBeamGradMob" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#4F46E5" stopOpacity="0.85" />
+            <stop offset="50%" stopColor="#2563EB" stopOpacity="0.95" />
+            <stop offset="100%" stopColor="#059669" stopOpacity="0.9" />
+          </linearGradient>
+        </defs>
+
+        {/* Left Skills -> Center AI Engine */}
+        <path d="M 74 80 C 110 90, 140 112, 176 150" className="vector-base" />
+        <path d="M 74 80 C 110 90, 140 112, 176 150" className="vector-active" />
+
+        <path d="M 74 135 C 106 140, 138 150, 176 166" className="vector-base" />
+        <path d="M 74 135 C 106 140, 138 150, 176 166" className="vector-active" style={{ animationDelay: '0.6s' }} />
+
+        <path d="M 74 196 C 104 188, 138 176, 176 176" className="vector-base" />
+        <path d="M 74 196 C 104 188, 138 176, 176 176" className="vector-active" style={{ animationDelay: '1.1s' }} />
+
+        {/* Center AI Engine -> Right Opportunities */}
+        <path d="M 176 170 C 205 155, 228 130, 270 98" className="vector-base" />
+        <path d="M 176 170 C 205 155, 228 130, 270 98" className="vector-active vector-hero-match" style={{ animationDelay: '0.3s' }} />
+
+        <path d="M 176 170 C 205 170, 228 170, 278 170" className="vector-base" />
+        <path d="M 176 170 C 205 170, 228 170, 278 170" className="vector-active" style={{ animationDelay: '1.3s' }} />
+
+        <path d="M 176 170 C 205 192, 226 222, 270 245" className="vector-base" />
+        <path d="M 176 170 C 205 192, 226 222, 270 245" className="vector-active" style={{ animationDelay: '2s' }} />
       </svg>
 
       {/* LEFT SIDE: Generic User Skills (Rotating 2-3 examples) */}
@@ -267,21 +298,23 @@ export const SkillMatchScene: React.FC = () => {
         </div>
 
         {/* Alt Opportunities */}
-        {currentPreset.altRoles.map((role, i) => (
-          <div
-            key={`${presetIndex}-${role.title}`}
-            className={`opp-pill-node opp-${i === 0 ? 'mid' : 'bot'} opp-visible`}
-          >
-            <div className="opp-meta-line">
-              <span className="opp-dist">{role.distance}</span>
-              <span className={`opp-tag ${i === 0 ? 'tag-blue' : 'tag-slate'}`}>
-                {role.matchPct}% Match
-              </span>
+        <div className="opp-alt-container">
+          {currentPreset.altRoles.map((role, i) => (
+            <div
+              key={`${presetIndex}-${role.title}`}
+              className={`opp-pill-node opp-${i === 0 ? 'mid' : 'bot'} opp-visible`}
+            >
+              <div className="opp-meta-line">
+                <span className="opp-dist">{role.distance}</span>
+                <span className={`opp-tag ${i === 0 ? 'tag-blue' : 'tag-slate'}`}>
+                  {role.matchPct}% Match
+                </span>
+              </div>
+              <div className="opp-title-text">{role.title}</div>
+              <div className="opp-sub-text">{role.subtext}</div>
             </div>
-            <div className="opp-title-text">{role.title}</div>
-            <div className="opp-sub-text">{role.subtext}</div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     </div>
   );

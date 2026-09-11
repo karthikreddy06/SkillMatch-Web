@@ -11,9 +11,13 @@ import {
   ChevronDown,
   LogOut,
   LogIn,
+  Menu,
   User,
   UserPlus,
   ShieldCheck,
+  X,
+  Home,
+  ArrowRight,
 } from 'lucide-react';
 import { useAuth, isDemoEnabled, DEMO_USERS } from '../context/AuthContext';
 import { UserRole } from '../types';
@@ -39,11 +43,12 @@ export const Navbar: React.FC<NavbarProps> = ({
   const [showDemoMenu, setShowDemoMenu] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showVerificationModal, setShowVerificationModal] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
     <header className={isAuthenticated ? "glass-nav" : "editorial-header"} id="main-navigation">
       <div
-        className="container"
+        className="container navbar-inner"
         style={{
           display: 'flex',
           alignItems: 'center',
@@ -101,14 +106,14 @@ export const Navbar: React.FC<NavbarProps> = ({
           <nav
             style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
             id="primary-nav-links"
-            className="nav-center-tabs"
+            className={`nav-center-tabs ${mobileMenuOpen ? 'is-mobile-open' : ''}`}
           >
             {role === 'seeker' ? (
               /* Authenticated Candidate Navigation */
               <>
                 <button
                   className={`btn ${activeTab === 'discover' ? 'btn-secondary' : 'btn-ghost'} btn-sm`}
-                  onClick={() => setActiveTab('discover')}
+                  onClick={() => { setActiveTab('discover'); setMobileMenuOpen(false); }}
                   id="nav-discover-btn"
                 >
                   <Sparkles size={16} />
@@ -116,7 +121,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </button>
                 <button
                   className={`btn ${activeTab === 'applications' ? 'btn-secondary' : 'btn-ghost'} btn-sm`}
-                  onClick={() => setActiveTab('applications')}
+                  onClick={() => { setActiveTab('applications'); setMobileMenuOpen(false); }}
                   id="nav-applications-btn"
                 >
                   <UserCheck size={16} />
@@ -124,7 +129,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </button>
                 <button
                   className={`btn ${activeTab === 'saved' ? 'btn-secondary' : 'btn-ghost'} btn-sm`}
-                  onClick={() => setActiveTab('saved')}
+                  onClick={() => { setActiveTab('saved'); setMobileMenuOpen(false); }}
                   id="nav-saved-btn"
                 >
                   <Bookmark size={16} />
@@ -136,7 +141,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               <>
                 <button
                   className={`btn ${activeTab === 'dashboard' ? 'btn-secondary' : 'btn-ghost'} btn-sm`}
-                  onClick={() => setActiveTab('dashboard')}
+                  onClick={() => { setActiveTab('dashboard'); setMobileMenuOpen(false); }}
                   id="nav-dashboard-btn"
                 >
                   <LayoutDashboard size={16} />
@@ -144,7 +149,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </button>
                 <button
                   className={`btn ${activeTab === 'pipeline' ? 'btn-secondary' : 'btn-ghost'} btn-sm`}
-                  onClick={() => setActiveTab('pipeline')}
+                  onClick={() => { setActiveTab('pipeline'); setMobileMenuOpen(false); }}
                   id="nav-pipeline-btn"
                 >
                   <Users size={16} />
@@ -152,7 +157,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </button>
                 <button
                   className="btn btn-primary btn-sm"
-                  onClick={onOpenPostJob}
+                  onClick={() => { onOpenPostJob(); setMobileMenuOpen(false); }}
                   id="nav-post-job-btn"
                 >
                   <PlusCircle size={16} />
@@ -163,7 +168,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
             <button
               className={`btn ${activeTab === 'chat' ? 'btn-secondary' : 'btn-ghost'} btn-sm`}
-              onClick={() => setActiveTab('chat')}
+              onClick={() => { setActiveTab('chat'); setMobileMenuOpen(false); }}
               id="nav-messages-btn"
             >
               <MessageSquare size={16} />
@@ -172,7 +177,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           </nav>
         ) : (
           /* Logged-Out Public Minimal Header (Warm Studio Editorial Style) */
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+          <div className="public-header-content" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
             {/* LEFT: SkillMatch Wordmark */}
             <div
               style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}
@@ -208,46 +213,115 @@ export const Navbar: React.FC<NavbarProps> = ({
               </span>
             </div>
 
-            {/* CENTER: Navigation Links */}
-            <nav style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
-              <a href="#how-it-works" className="fora-nav-link" id="nav-how-it-works">
-                How It Works
-              </a>
-              <span
-                className="fora-nav-link"
-                onClick={() => onOpenAuth('register', 'seeker')}
-                id="nav-link-seekers"
-              >
-                For Job Seekers
-              </span>
-              <span
-                className="fora-nav-link"
-                onClick={() => onOpenAuth('register', 'employer')}
-                id="nav-link-employers"
-              >
-                For Employers
-              </span>
-            </nav>
+            {!mobileMenuOpen && (
+              <>
+                {/* CENTER: Navigation Links */}
+                <nav className="public-nav-links" style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
+                  <a href="#how-it-works" className="fora-nav-link" id="nav-how-it-works">
+                    How It Works
+                  </a>
+                  <span
+                    className="fora-nav-link"
+                    onClick={() => { onOpenAuth('register', 'seeker'); setMobileMenuOpen(false); }}
+                    id="nav-link-seekers"
+                  >
+                    For Job Seekers
+                  </span>
+                  <span
+                    className="fora-nav-link"
+                    onClick={() => { onOpenAuth('register', 'employer'); setMobileMenuOpen(false); }}
+                    id="nav-link-employers"
+                  >
+                    For Employers
+                  </span>
+                </nav>
 
-            {/* RIGHT: Sign In & Get Started */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
-              <button
-                className="fora-signin-btn"
-                onClick={() => onOpenAuth('login')}
-                id="header-signin-btn"
-              >
-                Sign In
-              </button>
-              <button
-                className="fora-getstarted-btn"
-                onClick={() => onOpenAuth('register', 'seeker')}
-                id="header-get-started-btn"
-              >
-                Get Started
-              </button>
-            </div>
+                {/* RIGHT: Sign In & Get Started */}
+                <div className="public-header-actions" style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+                  <button
+                    className="fora-signin-btn"
+                    onClick={() => { onOpenAuth('login'); setMobileMenuOpen(false); }}
+                    id="header-signin-btn"
+                  >
+                    Sign In
+                  </button>
+                  <button
+                    className="fora-getstarted-btn"
+                    onClick={() => { onOpenAuth('register', 'seeker'); setMobileMenuOpen(false); }}
+                    id="header-get-started-btn"
+                  >
+                    Get Started
+                  </button>
+                </div>
+              </>
+            )}
+
+            {mobileMenuOpen && (
+              <div className="public-mobile-panel is-mobile-open" role="dialog" aria-modal="true" aria-label="Mobile navigation menu">
+                <div className="public-mobile-panel-header">
+                  <div className="public-mobile-brand" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
+                    <div className="public-mobile-brand-mark">S</div>
+                    <span>SkillMatch<span>.</span></span>
+                  </div>
+                  <button
+                    className="public-mobile-panel-close"
+                    onClick={() => setMobileMenuOpen(false)}
+                    aria-label="Close navigation menu"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+
+                <nav className="public-mobile-panel-nav" aria-label="Mobile navigation">
+                  <a href="#how-it-works" className="public-mobile-link" onClick={() => setMobileMenuOpen(false)}>
+                    <span className="public-mobile-link-icon"><Home size={16} /></span>
+                    <span>How It Works</span>
+                  </a>
+                  <button className="public-mobile-link" type="button" onClick={() => { onOpenAuth('register', 'seeker'); setMobileMenuOpen(false); }}>
+                    <span className="public-mobile-link-icon"><User size={16} /></span>
+                    <span>For Job Seekers</span>
+                  </button>
+                  <button className="public-mobile-link" type="button" onClick={() => { onOpenAuth('register', 'employer'); setMobileMenuOpen(false); }}>
+                    <span className="public-mobile-link-icon"><Briefcase size={16} /></span>
+                    <span>For Employers</span>
+                  </button>
+                </nav>
+
+                <div className="public-mobile-divider" />
+
+                <div className="public-mobile-cta-stack">
+                  <button
+                    className="public-mobile-cta primary"
+                    onClick={() => { onOpenAuth('register', 'seeker'); setMobileMenuOpen(false); }}
+                    type="button"
+                  >
+                    <span>Get Started</span>
+                    <ArrowRight size={16} />
+                  </button>
+                  <button
+                    className="public-mobile-cta secondary"
+                    onClick={() => { onOpenAuth('login'); setMobileMenuOpen(false); }}
+                    type="button"
+                  >
+                    <span>Sign In</span>
+                    <ArrowRight size={16} />
+                  </button>
+                </div>
+
+                <div className="public-mobile-footer">Find work. Grow your future.</div>
+              </div>
+            )}
           </div>
         )}
+
+        <button
+          className={`navbar-mobile-toggle ${mobileMenuOpen ? 'is-mobile-open' : ''}`}
+          onClick={() => setMobileMenuOpen((open) => !open)}
+          aria-label={mobileMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
+          aria-expanded={mobileMenuOpen}
+        >
+          {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+        </button>
 
         {/* Right Section: Auth Controls / Profile ONLY if Authenticated */}
         {isAuthenticated && (

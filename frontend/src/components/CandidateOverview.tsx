@@ -55,7 +55,7 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
 
   const profileCompletionCalc = useMemo(() => {
     if (!user) return 0;
-    const fields = [user.full_name, user.headline, user.location, user.skills?.length, user.resume_url];
+    const fields = [user.full_name, user.headline, user.bio, user.location, user.skills?.length, user.resume_url, user.experience_level];
     return Math.round((fields.filter(Boolean).length / fields.length) * 100);
   }, [user]);
 
@@ -142,7 +142,7 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
       {/* 4-Stat Metric Grid */}
       <section className="dashboard-stat-grid">
         {[
-          { label: 'Recommended Jobs', value: jobs.length, note: 'Active matches available', icon: Sparkles, color: 'indigo' },
+          { label: 'Recommended Jobs', value: recommendedJobs.length, note: 'Active matches available', icon: Sparkles, color: 'indigo' },
           { label: 'Applications', value: applications.length, note: 'Submitted applications', icon: FileText, color: 'purple' },
           { label: 'Saved Jobs', value: savedJobIds.size, note: 'Shortlisted roles', icon: Bookmark, color: 'pink' },
           { label: 'Profile Completion', value: `${profileCompletionCalc}%`, note: hasSkills ? 'Match system active' : 'Complete profile details', icon: Activity, color: 'emerald' },

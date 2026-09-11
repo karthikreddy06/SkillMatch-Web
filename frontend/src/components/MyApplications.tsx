@@ -225,7 +225,7 @@ export const MyApplications: React.FC<MyApplicationsProps> = ({ user, onOpenChat
                       marginBottom: '1.25rem',
                     }}
                   >
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem', position: 'relative' }}>
+                    <div className="application-stepper-grid">
                       {[
                         { title: 'Application Sent', desc: 'Received by system', step: 1 },
                         { title: 'Resume Review', desc: 'Shortlist review', step: 2 },

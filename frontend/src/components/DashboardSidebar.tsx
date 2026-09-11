@@ -65,7 +65,6 @@ export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
   const navigate = (id: string) => {
     if (id === 'profile') onOpenProfilePage();
     else if (id === 'settings') onOpenSettings();
-    else if (id === 'jobs') onOpenPostJob();
     else setActiveTab(id);
     setMobileOpen(false);
   };
@@ -91,7 +90,7 @@ export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
             <span className="dashboard-user-avatar">{user?.avatar_url ? <img src={user.avatar_url} alt="" /> : (user?.full_name || user?.company_name || 'U')[0].toUpperCase()}</span>
             {!collapsed && <span><strong>{user?.full_name || user?.company_name || 'Your profile'}</strong><small>{role === 'employer' ? 'Employer' : 'Job seeker'}</small></span>}
           </button>
-          {!collapsed && showProfileMenu && <div className="dashboard-profile-menu"><button onClick={() => { setShowProfileMenu(false); onOpenProfilePage(); }}><UserRound size={14} /> View Profile</button><button onClick={() => { setShowProfileMenu(false); onOpenEditProfile(); }}><UserRound size={14} /> Edit Profile</button><button onClick={() => { setShowProfileMenu(false); onOpenSettings(); }}><Settings size={14} /> Settings</button><button className="danger" onClick={() => { setShowProfileMenu(false); logout(); }}><LogOut size={14} /> Sign out</button></div>}
+          {!collapsed && showProfileMenu && <div className="dashboard-profile-menu"><button onClick={() => { setShowProfileMenu(false); setMobileOpen(false); onOpenProfilePage(); }}><UserRound size={14} /> View Profile</button><button onClick={() => { setShowProfileMenu(false); setMobileOpen(false); onOpenEditProfile(); }}><UserRound size={14} /> Edit Profile</button><button onClick={() => { setShowProfileMenu(false); setMobileOpen(false); onOpenSettings(); }}><Settings size={14} /> Settings</button><button className="danger" onClick={() => { setShowProfileMenu(false); setMobileOpen(false); logout(); }}><LogOut size={14} /> Sign out</button></div>}
         </div>
         <button className="dashboard-collapse-button" onClick={() => setCollapsed(!collapsed)} aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}>{collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}</button>
       </aside>

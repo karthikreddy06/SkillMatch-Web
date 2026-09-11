@@ -9,6 +9,7 @@ import { JobDetailsModal } from './components/JobDetailsModal';
 import { MyApplications } from './components/MyApplications';
 import { SavedJobsView } from './components/SavedJobsView';
 import { CandidateProfileModal } from './components/CandidateProfileModal';
+import { CandidateDetailsModal } from './components/CandidateDetailsModal';
 import { EmployerDashboard } from './components/EmployerDashboard';
 import { ATSPipeline } from './components/ATSPipeline';
 import { PostJobModal } from './components/PostJobModal';
@@ -61,6 +62,8 @@ const MainAppContent: React.FC = () => {
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [theme, setTheme] = useState<'light' | 'dark' | 'system'>(() => (localStorage.getItem('skillmatch_theme') as 'light' | 'dark' | 'system') || 'light');
   const [isPostJobModalOpen, setIsPostJobModalOpen] = useState(false);
+  const [jobToEdit, setJobToEdit] = useState<Job | null>(null);
+  const [selectedCandidateApp, setSelectedCandidateApp] = useState<Application | null>(null);
   const [applicationForScheduling, setApplicationForScheduling] = useState<Application | null>(null);
   const [activeChatAppId, setActiveChatAppId] = useState<string | null>(null);
   const [selectedPipelineJobId, setSelectedPipelineJobId] = useState<string | undefined>(undefined);
@@ -144,6 +147,8 @@ const MainAppContent: React.FC = () => {
           setSelectedJobForDetails(null);
           setIsProfileModalOpen(false);
           setIsPostJobModalOpen(false);
+          setJobToEdit(null);
+          setSelectedCandidateApp(null);
           setApplicationForScheduling(null);
           setActiveChatAppId(null);
         }
@@ -234,8 +239,8 @@ const MainAppContent: React.FC = () => {
         });
         setJobs(data);
       } else {
-        const data = await api.getRecommendations(user?.id, recommendationRadius);
-        setJobs(data);
+        const recommendations = await api.getRecommendations(user?.id, recommendationRadius);
+        setJobs(recommendations.length ? recommendations : await api.getJobs());
       }
     } catch (err) {
       console.error('Error fetching jobs:', err);
@@ -512,19 +517,37 @@ const MainAppContent: React.FC = () => {
             {activeTab === 'settings' && <SettingsPage user={user} theme={theme} onThemeChange={setTheme} onEditProfile={() => { setIsProfileModalOpen(true); window.history.pushState({ skillmatch: true, tab: 'settings', modal: 'profile-edit' }, '', '#settings/edit-profile'); }} onSignOut={logout} onToast={showToast} />}
             {activeTab === 'dashboard' && (
               <EmployerDashboard
-                onOpenPostJob={() => { setIsPostJobModalOpen(true); window.history.pushState({ skillmatch: true, tab: activeTab, modal: 'post-job' }, '', `#${activeTab}/post-job`); }}
+                onOpenPostJob={() => { setJobToEdit(null); setIsPostJobModalOpen(true); window.history.pushState({ skillmatch: true, tab: activeTab, modal: 'post-job' }, '', `#${activeTab}/post-job`); }}
                 onViewPipeline={(jobId) => {
                   setSelectedPipelineJobId(jobId);
                   navigateInApp('pipeline');
+                }}
+                onEditJob={(job) => {
+                  setJobToEdit(job);
+                  setIsPostJobModalOpen(true);
+                  window.history.pushState({ skillmatch: true, tab: activeTab, modal: 'edit-job', jobId: job.id }, '', `#${activeTab}/edit-job/${job.id}`);
+                }}
+                onViewCandidate={(app) => {
+                  setSelectedCandidateApp(app);
+                  window.history.pushState({ skillmatch: true, tab: activeTab, modal: 'candidate-details', applicationId: app.id }, '', `#${activeTab}/candidate/${app.id}`);
                 }}
               />
             )}
             {(activeTab === 'matching' || activeTab === 'analytics' || activeTab === 'candidates' || activeTab === 'jobs') && (
               <EmployerDashboard
-                onOpenPostJob={() => { setIsPostJobModalOpen(true); window.history.pushState({ skillmatch: true, tab: activeTab, modal: 'post-job' }, '', `#${activeTab}/post-job`); }}
+                onOpenPostJob={() => { setJobToEdit(null); setIsPostJobModalOpen(true); window.history.pushState({ skillmatch: true, tab: activeTab, modal: 'post-job' }, '', `#${activeTab}/post-job`); }}
                 onViewPipeline={(jobId) => {
                   setSelectedPipelineJobId(jobId);
                   navigateInApp('pipeline');
+                }}
+                onEditJob={(job) => {
+                  setJobToEdit(job);
+                  setIsPostJobModalOpen(true);
+                  window.history.pushState({ skillmatch: true, tab: activeTab, modal: 'edit-job', jobId: job.id }, '', `#${activeTab}/edit-job/${job.id}`);
+                }}
+                onViewCandidate={(app) => {
+                  setSelectedCandidateApp(app);
+                  window.history.pushState({ skillmatch: true, tab: activeTab, modal: 'candidate-details', applicationId: app.id }, '', `#${activeTab}/candidate/${app.id}`);
                 }}
               />
             )}
@@ -534,6 +557,10 @@ const MainAppContent: React.FC = () => {
                 initialJobId={selectedPipelineJobId}
                 onOpenSchedule={(app) => { setApplicationForScheduling(app); window.history.pushState({ skillmatch: true, tab: 'pipeline', modal: 'schedule-interview', applicationId: app.id }, '', `#pipeline/schedule/${app.id}`); }}
                 onOpenChat={(appId) => { setActiveChatAppId(appId); window.history.pushState({ skillmatch: true, tab: 'pipeline', modal: 'chat', applicationId: appId }, '', `#pipeline/chat/${appId}`); }}
+                onViewCandidate={(app) => {
+                  setSelectedCandidateApp(app);
+                  window.history.pushState({ skillmatch: true, tab: 'pipeline', modal: 'candidate-details', applicationId: app.id }, '', `#pipeline/candidate/${app.id}`);
+                }}
               />
             )}
 
@@ -573,11 +600,38 @@ const MainAppContent: React.FC = () => {
 
       {isPostJobModalOpen && (
         <PostJobModal
-          onClose={() => { setIsPostJobModalOpen(false); closeModalInApp(); }}
+          jobToEdit={jobToEdit}
+          onClose={() => { setIsPostJobModalOpen(false); setJobToEdit(null); closeModalInApp(); }}
           onSuccess={(jobTitle) => {
-            showToast(`Published job opening for "${jobTitle}"!`, 'success');
+            showToast(jobToEdit ? `Updated job opening for "${jobTitle}"!` : `Published job opening for "${jobTitle}"!`, 'success');
             fetchJobs();
+            setJobToEdit(null);
             navigateInApp('dashboard');
+          }}
+        />
+      )}
+
+      {selectedCandidateApp && (
+        <CandidateDetailsModal
+          application={selectedCandidateApp}
+          onClose={() => { setSelectedCandidateApp(null); closeModalInApp(); }}
+          onUpdateStatus={async (appId, newStatus) => {
+            try {
+              const updated = await api.updateApplicationStatus(appId, newStatus);
+              setSelectedCandidateApp((prev) => (prev && prev.id === appId ? { ...prev, status: updated.status } : prev));
+              showToast(`Updated candidate status to ${newStatus.toUpperCase()}`, 'success');
+              fetchJobs();
+            } catch (err: any) {
+              showToast(err.message || 'Failed to update candidate status', 'error');
+            }
+          }}
+          onOpenSchedule={(app) => {
+            setApplicationForScheduling(app);
+            window.history.pushState({ skillmatch: true, tab: activeTab, modal: 'schedule-interview', applicationId: app.id }, '', `#${activeTab}/schedule/${app.id}`);
+          }}
+          onOpenChat={(appId) => {
+            setActiveChatAppId(appId);
+            window.history.pushState({ skillmatch: true, tab: activeTab, modal: 'chat', applicationId: appId }, '', `#${activeTab}/chat/${appId}`);
           }}
         />
       )}

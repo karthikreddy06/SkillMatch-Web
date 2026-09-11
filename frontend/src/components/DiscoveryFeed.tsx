@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Bookmark, CheckCircle2, MapPin, Map as MapIcon, Navigation, Search, SlidersHorizontal, Sparkles } from 'lucide-react';
 import { Job, Profile } from '../types';
 import { JobLocationMap, calculateDistanceKm } from './JobLocationMap';
@@ -19,7 +19,7 @@ interface DiscoveryFeedProps {
 const categoryForJob = (job: Job) => {
   const text = `${job.title} ${job.description} ${(job.skills || []).join(' ')}`.toLowerCase();
   if (/developer|engineer|software|data|react|python|sql/.test(text)) return 'Software / IT';
-  if (/sales|hr|human resource|accountant|office|admin/.test(text)) return 'Office / Administration';
+  if (/sales|hr|human resource|accountant|office|admin/.test(text)) return text.includes('sales') ? 'Sales' : 'Office / Administration';
   if (/delivery|warehouse|driver|logistics/.test(text)) return 'Driving / Logistics';
   if (/hotel|hospitality|guest/.test(text)) return 'Hospitality';
   if (/health|clinic|patient/.test(text)) return 'Healthcare';
@@ -32,7 +32,7 @@ const categoryForJob = (job: Job) => {
 
 const profileCompletion = (user: Profile | null) => {
   if (!user) return 0;
-  const fields = [user.full_name, user.headline, user.location, user.skills?.length, user.resume_url];
+  const fields = [user.full_name, user.headline, user.bio, user.location, user.skills?.length, user.resume_url, user.experience_level];
   return Math.round((fields.filter(Boolean).length / fields.length) * 100);
 };
 
@@ -49,6 +49,10 @@ export const DiscoveryFeed: React.FC<DiscoveryFeedProps> = ({ jobs, user, savedJ
   const userLng = userCoordinates?.lng;
   const userSkills = useMemo(() => new Set((user?.skills || []).map((skill) => skill.toLowerCase().trim())), [user?.skills]);
 
+  useEffect(() => {
+    setMaxDistanceKm(recommendationRadius);
+  }, [recommendationRadius]);
+
   const augmentedJobs = useMemo(() => jobs.map((job) => {
     const hasJobCoordinates = typeof job.latitude === 'number' && typeof job.longitude === 'number';
     const distance = hasLocation && hasJobCoordinates && userLat !== undefined && userLng !== undefined ? calculateDistanceKm(userLat, userLng, job.latitude!, job.longitude!) : undefined;
@@ -60,7 +64,7 @@ export const DiscoveryFeed: React.FC<DiscoveryFeedProps> = ({ jobs, user, savedJ
   const filteredJobs = scoredJobs.filter((job) => {
     const matchesQuery = !query || `${job.title} ${job.company_name} ${job.location} ${job.description}`.toLowerCase().includes(query.toLowerCase());
     const matchesCategory = !categoryFilter || job.category === categoryFilter;
-    const matchesDistance = true;
+    const matchesDistance = maxDistanceKm === null || job.commute_distance_km === undefined || job.commute_distance_km <= maxDistanceKm;
     return matchesQuery && matchesCategory && matchesDistance;
   });
   const recommended = filteredJobs.filter((job) => job.match_score !== undefined).sort((a, b) => (b.match_score || 0) - (a.match_score || 0)).slice(0, 6);
@@ -89,7 +93,7 @@ export const DiscoveryFeed: React.FC<DiscoveryFeedProps> = ({ jobs, user, savedJ
     <main className="discovery-main"><div className="discovery-filters"><div className="discovery-search-row"><label><Search size={16} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search jobs or skills" /></label><label><MapPin size={16} /><input value={user?.location || ''} readOnly placeholder="Set your location in Profile" /></label><button className="btn btn-primary" onClick={() => setQuery(query)}>Search</button></div><div className="discovery-filter-row"><span><SlidersHorizontal size={14} /> Radius</span>{[5, 15, 25, 50, 100, null].map((distance) => <button className={recommendationRadius === distance ? 'filter-chip active' : 'filter-chip'} onClick={() => { setMaxDistanceKm(distance); onRadiusChange(distance); }} key={String(distance)}>{distance === null ? 'All India' : `${distance} km`}</button>)}<span><SlidersHorizontal size={14} /> Category</span>{['', 'Software / IT', 'Office / Administration', 'Sales', 'Retail', 'Hospitality', 'Healthcare', 'Driving / Logistics', 'Manufacturing', 'Skilled Trades'].map((category) => <button className={categoryFilter === category ? 'filter-chip active' : 'filter-chip'} onClick={() => setCategoryFilter(category)} key={category}>{category || 'All'}</button>)}</div></div>
       {!hasLocation && <div className="location-notice"><MapPin size={17} /><span><strong>Set your location to find jobs near you.</strong> Distances will appear after you add a profile location.</span><button className="btn btn-secondary btn-sm" onClick={onOpenProfile}>Set location</button></div>}
       {userSkills.size === 0 && <div className="profile-prompt"><Sparkles size={18} /><div><strong>Tell us what you can do</strong><p>Add your skills to get better job matches.</p></div><button className="btn btn-primary btn-sm" onClick={onOpenProfile}>Add skills</button></div>}
-      {viewMode === 'map' ? <JobLocationMap mode="radar" jobs={filteredJobs} height="360px" onSelectJob={onSelectJob} userLat={userLat} userLng={userLng} /> : <><div className="section-heading"><div><h2>Recommended for you</h2><p>{userSkills.size ? 'Ranked using your skills and preferences.' : 'Add profile details to unlock personalized ranking.'}</p></div><button className="btn btn-secondary btn-sm" onClick={() => setViewMode('map')}><MapIcon size={14} /> Nearby map</button></div>{recommended.length ? <div className="job-card-grid">{recommended.map(renderCard)}</div> : <div className="empty-jobs"><h3>No matching jobs found.</h3><p>Try increasing your distance or changing your filters.</p><button className="btn btn-secondary btn-sm" onClick={() => { setCategoryFilter(''); setMaxDistanceKm(null); setQuery(''); }}>Clear Filters</button></div>}{moreJobs.length > 0 && <><div className="section-heading more-jobs-heading"><div><h2>More jobs near you</h2><p>Explore additional active opportunities.</p></div></div><div className="job-card-grid">{moreJobs.map(renderCard)}</div></>}</>}
+      {viewMode === 'map' ? <JobLocationMap mode="radar" jobs={filteredJobs} height="360px" onSelectJob={onSelectJob} userLat={userLat} userLng={userLng} /> : <><div className="section-heading"><div><h2>Recommended for you</h2><p>{userSkills.size ? 'Ranked using your skills and preferences.' : 'Add profile details to unlock personalized ranking.'}</p></div><button className="btn btn-secondary btn-sm" onClick={() => setViewMode('map')}><MapIcon size={14} /> Nearby map</button></div>{recommended.length ? <div className="job-card-grid">{recommended.map(renderCard)}</div> : <div className="empty-jobs"><h3>No matching jobs found.</h3><p>Try increasing your distance or changing your filters.</p><button className="btn btn-secondary btn-sm" onClick={() => { setCategoryFilter(''); setMaxDistanceKm(null); setQuery(''); onRadiusChange(null); }}>Clear Filters</button></div>}{moreJobs.length > 0 && <><div className="section-heading more-jobs-heading"><div><h2>More jobs near you</h2><p>Explore additional active opportunities.</p></div></div><div className="job-card-grid">{moreJobs.map(renderCard)}</div></>}</>}
     </main>
   </div></div></section>;
 };

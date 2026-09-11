@@ -79,7 +79,7 @@ db_url = os.getenv('DATABASE_URL') or DEFAULT_DB_URL
 DATABASES = {
     'default': dj_database_url.config(
         default=db_url,
-        conn_max_age=int(os.getenv('CONN_MAX_AGE', '60')),
+        conn_max_age=int(os.getenv('CONN_MAX_AGE', '0')),
         ssl_require=False
     )
 }

@@ -10,7 +10,13 @@ import {
   ApplicationStatus,
 } from '../types';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+const configuredApiBaseUrl = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL;
+const localApiBaseUrl = typeof window !== 'undefined'
+  ? (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    ? 'http://localhost:8000/api'
+    : `http://${window.location.hostname}:8000/api`)
+  : 'http://localhost:8000/api';
+const API_BASE_URL = configuredApiBaseUrl || localApiBaseUrl;
 
 class ApiService {
   private getToken(): string | null {

@@ -39,6 +39,8 @@ export const CandidateProfileModal: React.FC<CandidateProfileModalProps> = ({
   const [fullName, setFullName] = useState(user?.full_name || 'James Carter');
   const [email, setEmail] = useState(user?.email || 'jamescarter1930@gmail.com');
   const [headline, setHeadline] = useState(user?.headline || 'Project manager');
+  const [seekerBio, setSeekerBio] = useState(user?.bio || '');
+  const [experienceLevel, setExperienceLevel] = useState(user?.experience_level || '');
   const [timezone, setTimezone] = useState('GMT-8');
   const [workingHours, setWorkingHours] = useState(user?.preferred_shift || '10 AM – 6 PM');
   const [location, setLocation] = useState(user?.location || '');
@@ -65,11 +67,50 @@ export const CandidateProfileModal: React.FC<CandidateProfileModalProps> = ({
   const [taxId, setTaxId] = useState(user?.tax_id || '29AAACT1234F1Z5');
   const [website, setWebsite] = useState(user?.company_website || 'https://blpindustry.ai');
   const [address, setAddress] = useState(
-    user?.company_address || ''
+    user?.company_address || user?.company_location || user?.location || ''
   );
   const [bio, setBio] = useState(
-    user?.bio || 'Enterprise AI and Industrial Intelligence Platform solving complex matching & automation.'
+    user?.about_company || user?.bio || 'Enterprise AI and Industrial Intelligence Platform solving complex matching & automation.'
   );
+  const [industry, setIndustry] = useState(user?.industry || 'Technology & Industrial AI');
+  const [companySize, setCompanySize] = useState(user?.company_size || '51-200');
+  const [foundedYear, setFoundedYear] = useState(user?.founded_year || '2021');
+  const [benefits, setBenefits] = useState<string[]>(
+    user?.benefits && user.benefits.length > 0
+      ? user.benefits
+      : ['Health Insurance', 'Flexible Working Hours', 'Performance Bonuses']
+  );
+  const [newBenefit, setNewBenefit] = useState('');
+  const [culture, setCulture] = useState<string[]>(
+    user?.culture && user.culture.length > 0
+      ? user.culture
+      : ['Skill-First Meritocracy', 'Rapid Innovation', 'Collaborative Teamwork']
+  );
+  const [newCultureItem, setNewCultureItem] = useState('');
+
+  const handleAddBenefit = () => {
+    const trimmed = newBenefit.trim();
+    if (trimmed && !benefits.includes(trimmed)) {
+      setBenefits([...benefits, trimmed]);
+      setNewBenefit('');
+    }
+  };
+
+  const handleRemoveBenefit = (bToRemove: string) => {
+    setBenefits(benefits.filter((b) => b !== bToRemove));
+  };
+
+  const handleAddCulture = () => {
+    const trimmed = newCultureItem.trim();
+    if (trimmed && !culture.includes(trimmed)) {
+      setCulture([...culture, trimmed]);
+      setNewCultureItem('');
+    }
+  };
+
+  const handleRemoveCulture = (cToRemove: string) => {
+    setCulture(culture.filter((c) => c !== cToRemove));
+  };
 
   const [isSaving, setIsSaving] = useState(false);
   const [uploadingResume, setUploadingResume] = useState(false);
@@ -207,9 +248,17 @@ export const CandidateProfileModal: React.FC<CandidateProfileModalProps> = ({
           full_name: companyName,
           email,
           company_website: website,
+          website: website,
           company_location: address,
+          location: address,
           about_company: bio,
+          bio: bio,
           avatar_url: avatarUrl,
+          industry,
+          company_size: companySize,
+          founded_year: foundedYear,
+          benefits,
+          culture,
         });
         setUserProfile(updated);
       } else {
@@ -217,6 +266,8 @@ export const CandidateProfileModal: React.FC<CandidateProfileModalProps> = ({
           full_name: fullName,
           email,
           headline,
+          bio: seekerBio,
+          experience_level: experienceLevel,
           location,
           avatar_url: avatarUrl,
           preferred_shift: workingHours,
@@ -361,7 +412,7 @@ export const CandidateProfileModal: React.FC<CandidateProfileModalProps> = ({
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="ref-profile-input"
-                    placeholder="lalithkumar3136@gmail.com"
+                    placeholder="employer@company.com"
                     id="profile-email-input"
                   />
                 </div>
@@ -471,7 +522,224 @@ export const CandidateProfileModal: React.FC<CandidateProfileModalProps> = ({
                     rows={3}
                     placeholder="Brief overview of your company..."
                     style={{ resize: 'vertical' }}
+                    id="profile-company-bio-input"
                   />
+                </div>
+
+                {/* Industry & Size */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem' }}>
+                  <div>
+                    <label
+                      style={{
+                        display: 'block',
+                        fontSize: '0.82rem',
+                        fontWeight: 500,
+                        color: '#6B7280',
+                        marginBottom: '0.4rem',
+                      }}
+                    >
+                      Industry / Sector
+                    </label>
+                    <input
+                      type="text"
+                      value={industry}
+                      onChange={(e) => setIndustry(e.target.value)}
+                      className="ref-profile-input"
+                      placeholder="e.g. Technology & AI"
+                      id="profile-company-industry-input"
+                    />
+                  </div>
+
+                  <div>
+                    <label
+                      style={{
+                        display: 'block',
+                        fontSize: '0.82rem',
+                        fontWeight: 500,
+                        color: '#6B7280',
+                        marginBottom: '0.4rem',
+                      }}
+                    >
+                      Company Size
+                    </label>
+                    <select
+                      value={companySize}
+                      onChange={(e) => setCompanySize(e.target.value)}
+                      className="ref-profile-input"
+                      id="profile-company-size-select"
+                    >
+                      <option value="1-10">1-10 employees</option>
+                      <option value="11-50">11-50 employees</option>
+                      <option value="51-200">51-200 employees</option>
+                      <option value="201-500">201-500 employees</option>
+                      <option value="500+">500+ employees</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Founded Year */}
+                <div>
+                  <label
+                    style={{
+                      display: 'block',
+                      fontSize: '0.82rem',
+                      fontWeight: 500,
+                      color: '#6B7280',
+                      marginBottom: '0.4rem',
+                    }}
+                  >
+                    Founded Year
+                  </label>
+                  <input
+                    type="text"
+                    value={foundedYear}
+                    onChange={(e) => setFoundedYear(e.target.value)}
+                    className="ref-profile-input"
+                    placeholder="e.g. 2021"
+                    id="profile-company-founded-input"
+                  />
+                </div>
+
+                {/* Benefits Tag List */}
+                <div>
+                  <label
+                    style={{
+                      display: 'block',
+                      fontSize: '0.82rem',
+                      fontWeight: 500,
+                      color: '#6B7280',
+                      marginBottom: '0.4rem',
+                    }}
+                  >
+                    Perks & Benefits Offered
+                  </label>
+                  <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                    <input
+                      type="text"
+                      value={newBenefit}
+                      onChange={(e) => setNewBenefit(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAddBenefit();
+                        }
+                      }}
+                      className="ref-profile-input"
+                      placeholder="e.g. Health Insurance, Gym, Equity"
+                      id="profile-add-benefit-input"
+                    />
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-sm"
+                      onClick={handleAddBenefit}
+                    >
+                      Add
+                    </button>
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+                    {benefits.map((b, idx) => (
+                      <span
+                        key={idx}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.35rem',
+                          background: '#EFF6FF',
+                          color: '#1D4ED8',
+                          padding: '0.25rem 0.65rem',
+                          borderRadius: '999px',
+                          fontSize: '0.78rem',
+                          fontWeight: 500,
+                        }}
+                      >
+                        {b}
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveBenefit(b)}
+                          style={{
+                            background: 'transparent',
+                            border: 'none',
+                            color: '#93C5FD',
+                            cursor: 'pointer',
+                            padding: 0,
+                          }}
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Culture Tag List */}
+                <div>
+                  <label
+                    style={{
+                      display: 'block',
+                      fontSize: '0.82rem',
+                      fontWeight: 500,
+                      color: '#6B7280',
+                      marginBottom: '0.4rem',
+                    }}
+                  >
+                    Workplace Culture & Core Values
+                  </label>
+                  <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                    <input
+                      type="text"
+                      value={newCultureItem}
+                      onChange={(e) => setNewCultureItem(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAddCulture();
+                        }
+                      }}
+                      className="ref-profile-input"
+                      placeholder="e.g. Fast-paced, Work-life balance, Merit-based"
+                      id="profile-add-culture-input"
+                    />
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-sm"
+                      onClick={handleAddCulture}
+                    >
+                      Add
+                    </button>
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+                    {culture.map((c, idx) => (
+                      <span
+                        key={idx}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.35rem',
+                          background: '#F0FDF4',
+                          color: '#15803D',
+                          padding: '0.25rem 0.65rem',
+                          borderRadius: '999px',
+                          fontSize: '0.78rem',
+                          fontWeight: 500,
+                        }}
+                      >
+                        {c}
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveCulture(c)}
+                          style={{
+                            background: 'transparent',
+                            border: 'none',
+                            color: '#86EFAC',
+                            cursor: 'pointer',
+                            padding: 0,
+                          }}
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                  </div>
                 </div>
               </>
             ) : (
@@ -525,7 +793,7 @@ export const CandidateProfileModal: React.FC<CandidateProfileModalProps> = ({
 
                 <div>
                   <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 500, color: '#6B7280', marginBottom: '0.4rem' }}>Preferred work location</label>
-                  <div style={{ display: 'flex', gap: '0.45rem' }}>
+                  <div className="profile-location-row" style={{ display: 'flex', gap: '0.45rem' }}>
                     <input type="text" value={location} onChange={(event) => { setLocation(event.target.value); setLocationStatus(''); }} className="ref-profile-input" placeholder="Search city or area" />
                     <button type="button" className="btn btn-secondary btn-sm" onClick={searchLocation}>Search</button>
                     <button type="button" className="btn btn-secondary btn-sm" onClick={useCurrentLocation}>Use GPS</button>
@@ -618,6 +886,33 @@ export const CandidateProfileModal: React.FC<CandidateProfileModalProps> = ({
                     placeholder="Project manager"
                     id="profile-headline-input"
                   />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 500, color: '#6B7280', marginBottom: '0.4rem' }}>
+                    Professional summary
+                  </label>
+                  <textarea
+                    value={seekerBio}
+                    onChange={(e) => setSeekerBio(e.target.value)}
+                    className="ref-profile-input"
+                    rows={3}
+                    placeholder="Summarize your experience, strengths, and goals"
+                    style={{ resize: 'vertical' }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 500, color: '#6B7280', marginBottom: '0.4rem' }}>
+                    Experience level
+                  </label>
+                  <select value={experienceLevel} onChange={(e) => setExperienceLevel(e.target.value)} className="ref-profile-input" style={{ cursor: 'pointer' }}>
+                    <option value="">Select experience level</option>
+                    <option value="entry">Entry level</option>
+                    <option value="mid">Mid level</option>
+                    <option value="senior">Senior level</option>
+                    <option value="lead">Lead / Manager</option>
+                  </select>
                 </div>
 
                 <div>

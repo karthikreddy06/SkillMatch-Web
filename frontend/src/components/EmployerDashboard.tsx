@@ -1,22 +1,44 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ArrowRight, ArrowUpRight, BriefcaseBusiness, CheckCircle2, Clock3, FileText, Plus, Sparkles, Users } from 'lucide-react';
+import {
+  ArrowRight,
+  ArrowUpRight,
+  BriefcaseBusiness,
+  CheckCircle2,
+  Clock3,
+  FileText,
+  Plus,
+  Sparkles,
+  Users,
+  Pencil,
+  Eye,
+  ToggleLeft,
+  ToggleRight,
+} from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { Application, EmployerStats } from '../types';
+import { Application, EmployerStats, Job } from '../types';
 import { api } from '../services/api';
 
 interface EmployerDashboardProps {
   onOpenPostJob: () => void;
   onViewPipeline: (jobId?: string) => void;
+  onEditJob?: (job: Job) => void;
+  onViewCandidate?: (application: Application) => void;
 }
 
-export const EmployerDashboard: React.FC<EmployerDashboardProps> = ({ onOpenPostJob, onViewPipeline }) => {
+export const EmployerDashboard: React.FC<EmployerDashboardProps> = ({
+  onOpenPostJob,
+  onViewPipeline,
+  onEditJob,
+  onViewCandidate,
+}) => {
   const { user } = useAuth();
   const [statsData, setStatsData] = useState<EmployerStats | null>(null);
   const [applications, setApplications] = useState<Application[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
+  const loadData = () => {
     if (!user?.id) return;
+    setIsLoading(true);
     Promise.all([api.getEmployerStats(user.id), api.getEmployerApplicants(user.id)])
       .then(([stats, applicantData]) => {
         setStatsData(stats);
@@ -24,6 +46,10 @@ export const EmployerDashboard: React.FC<EmployerDashboardProps> = ({ onOpenPost
       })
       .catch((error) => console.error('Failed to load employer overview:', error))
       .finally(() => setIsLoading(false));
+  };
+
+  useEffect(() => {
+    loadData();
   }, [user?.id]);
 
   const stats = statsData?.stats || {
@@ -35,14 +61,21 @@ export const EmployerDashboard: React.FC<EmployerDashboardProps> = ({ onOpenPost
   };
 
   const averageMatch = applications.length
-    ? Math.round(applications.reduce((sum, application) => sum + (application.match_score || 0), 0) / applications.length)
+    ? Math.round(
+        applications.reduce((sum, application) => sum + (application.match_score || 0), 0) /
+          applications.length
+      )
     : 0;
 
   const performance = [
     { label: 'Applications', value: stats.total_applicants, color: 'purple' },
     { label: 'Shortlisted', value: stats.shortlisted, color: 'pink' },
     { label: 'Interviews', value: stats.interview, color: 'green' },
-    { label: 'Hired', value: applications.filter((application) => application.status === 'offered').length, color: 'blue' },
+    {
+      label: 'Hired',
+      value: applications.filter((application) => application.status === 'offered').length,
+      color: 'blue',
+    },
   ];
 
   const candidates = useMemo(
@@ -50,7 +83,7 @@ export const EmployerDashboard: React.FC<EmployerDashboardProps> = ({ onOpenPost
     [applications]
   );
 
-  const employerName = user?.full_name || user?.company_name || 'Employer';
+  const employerName = user?.company_name || user?.full_name || 'Employer';
 
   const greeting = useMemo(() => {
     const hour = new Date().getHours();
@@ -59,6 +92,39 @@ export const EmployerDashboard: React.FC<EmployerDashboardProps> = ({ onOpenPost
     if (hour >= 17 && hour < 21) return { text: 'Good evening', emoji: '👋' };
     return { text: 'Good night', emoji: '🌙' };
   }, []);
+
+  const handleEditJobClick = async (jobSummary: any) => {
+    if (!onEditJob) return;
+    try {
+      const fullJob = await api.getJobDetail(jobSummary.id);
+      onEditJob(fullJob);
+    } catch {
+      onEditJob({
+        id: jobSummary.id,
+        employer_id: user?.id || '',
+        title: jobSummary.title,
+        company_name: user?.company_name || user?.full_name || 'Hiring Organization',
+        location: jobSummary.location || '',
+        job_type: 'Full-time',
+        shift_preference: 'Day Shift',
+        flexible_hours: true,
+        salary_range: jobSummary.salary_range || '',
+        description: '',
+        status: jobSummary.status || 'active',
+        created_at: jobSummary.created_at || new Date().toISOString(),
+      });
+    }
+  };
+
+  const handleToggleJobStatus = async (jobId: string, currentStatus: string) => {
+    const nextStatus = currentStatus === 'active' ? 'closed' : 'active';
+    try {
+      await api.updateJob(jobId, { status: nextStatus });
+      loadData();
+    } catch (err) {
+      console.error('Failed to toggle job status:', err);
+    }
+  };
 
   return (
     <div className="dashboard-page employer-overview-page">
@@ -71,12 +137,14 @@ export const EmployerDashboard: React.FC<EmployerDashboardProps> = ({ onOpenPost
           <h1>
             {greeting.text}, {employerName} {greeting.emoji}
           </h1>
-          <p>Find the right people for your team. Manage your jobs, discover matched candidates, and move great applicants forward.</p>
+          <p>
+            Find the right people for your team. Manage your jobs, discover matched candidates, and move great applicants forward.
+          </p>
           <div className="dashboard-welcome-actions">
-            <button className="btn btn-primary btn-primary-orange btn-pill" onClick={onOpenPostJob}>
+            <button className="btn btn-primary btn-primary-orange btn-pill" onClick={onOpenPostJob} id="hero-post-job-btn">
               <Plus size={16} /> Post a Job →
             </button>
-            <button className="btn btn-secondary btn-pill" onClick={() => onViewPipeline()}>
+            <button className="btn btn-secondary btn-pill" onClick={() => onViewPipeline()} id="hero-view-applications-btn">
               View Applications ({applications.length})
             </button>
           </div>
@@ -156,8 +224,14 @@ export const EmployerDashboard: React.FC<EmployerDashboardProps> = ({ onOpenPost
             <Sparkles size={18} className="panel-accent-icon" />
           </div>
           <div className="candidate-match-list">
-            {candidates.slice(0, 3).map((application) => (
-              <div className="candidate-match-row" key={application.id}>
+            {candidates.slice(0, 4).map((application) => (
+              <div
+                className="candidate-match-row interactive-card"
+                key={application.id}
+                onClick={() => onViewCandidate && onViewCandidate(application)}
+                style={{ cursor: onViewCandidate ? 'pointer' : 'default' }}
+                title="Click to view full candidate profile"
+              >
                 <span className="dashboard-company-mark">{(application.applicant?.full_name || 'C')[0].toUpperCase()}</span>
                 <div>
                   <strong>{application.applicant?.full_name || 'Candidate'}</strong>
@@ -171,18 +245,20 @@ export const EmployerDashboard: React.FC<EmployerDashboardProps> = ({ onOpenPost
         </section>
       </div>
 
-      {/* Recent Applications Table */}
+      {/* Recent Applications Section */}
       <section className="dashboard-panel glass-panel">
         <div className="dashboard-panel-heading">
           <div>
             <h2>Recent Applications</h2>
             <p>Review your latest candidate activity.</p>
           </div>
-          <button className="dashboard-inline-link" onClick={() => onViewPipeline()}>
+          <button className="dashboard-inline-link" onClick={() => onViewPipeline()} id="view-all-pipeline-btn">
             View all applications <ArrowUpRight size={14} />
           </button>
         </div>
-        <div className="dashboard-table-wrap">
+
+        {/* Desktop Table View (>= 640px) */}
+        <div className="dashboard-table-wrap employer-desktop-table-wrap">
           <table className="dashboard-table">
             <thead>
               <tr>
@@ -213,7 +289,13 @@ export const EmployerDashboard: React.FC<EmployerDashboardProps> = ({ onOpenPost
                     <span className={`dashboard-status ${application.status}`}>{application.status}</span>
                   </td>
                   <td>
-                    <button className="dashboard-table-action" onClick={() => onViewPipeline(application.job_id)}>
+                    <button
+                      className="dashboard-table-action"
+                      onClick={() => {
+                        if (onViewCandidate) onViewCandidate(application);
+                        else onViewPipeline(application.job_id);
+                      }}
+                    >
                       Review
                     </button>
                   </td>
@@ -221,6 +303,51 @@ export const EmployerDashboard: React.FC<EmployerDashboardProps> = ({ onOpenPost
               ))}
             </tbody>
           </table>
+          {!applications.length && <div className="dashboard-empty">No applications received yet.</div>}
+        </div>
+
+        {/* Mobile Cards View (< 640px) */}
+        <div className="employer-mobile-applications-list">
+          {applications.slice(0, 6).map((application) => (
+            <div
+              key={application.id}
+              className="employer-mobile-app-card interactive-card glass-panel"
+              onClick={() => onViewCandidate && onViewCandidate(application)}
+            >
+              <div className="employer-mobile-app-header">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <div className="dashboard-company-mark">
+                    {(application.applicant?.full_name || 'C')[0].toUpperCase()}
+                  </div>
+                  <div>
+                    <strong style={{ fontSize: '0.95rem', color: 'var(--text-primary)', display: 'block' }}>
+                      {application.applicant?.full_name || 'Candidate'}
+                    </strong>
+                    <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                      {application.job?.title || 'Job Opening'}
+                    </span>
+                  </div>
+                </div>
+                <span className="match-score-pill" style={{ fontSize: '0.8rem' }}>
+                  {application.match_score || 0}%
+                </span>
+              </div>
+              <div className="employer-mobile-app-footer">
+                <span className={`dashboard-status ${application.status}`}>{application.status}</span>
+                <button
+                  className="btn btn-secondary btn-sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (onViewCandidate) onViewCandidate(application);
+                    else onViewPipeline(application.job_id);
+                  }}
+                  style={{ fontSize: '0.75rem', padding: '0.35rem 0.75rem' }}
+                >
+                  Review Profile →
+                </button>
+              </div>
+            </div>
+          ))}
           {!applications.length && <div className="dashboard-empty">No applications received yet.</div>}
         </div>
       </section>
@@ -232,8 +359,8 @@ export const EmployerDashboard: React.FC<EmployerDashboardProps> = ({ onOpenPost
             <h2>Active Job Listings</h2>
             <p>Manage openings and review their candidate pipelines.</p>
           </div>
-          <button className="dashboard-inline-link" onClick={() => onViewPipeline()}>
-            Manage listings <ArrowUpRight size={14} />
+          <button className="dashboard-inline-link" onClick={onOpenPostJob} id="dashboard-post-job-link">
+            <Plus size={14} /> Post New Job
           </button>
         </div>
         <div className="employer-job-list">
@@ -242,19 +369,46 @@ export const EmployerDashboard: React.FC<EmployerDashboardProps> = ({ onOpenPost
               <span className="dashboard-company-mark">
                 <BriefcaseBusiness size={16} />
               </span>
-              <div>
-                <strong>{job.title}</strong>
-                <span className="job-card-meta">
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <strong style={{ fontSize: '0.92rem' }}>{job.title}</strong>
+                <span className="job-card-meta" style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
                   {job.location} · {job.salary_range || 'Salary discussed'}
                 </span>
               </div>
               <span className="employer-job-count">{job.applicants_count} applicants</span>
-              <span className="dashboard-status shortlisted">{job.status}</span>
-              <button className="dashboard-table-action" onClick={() => onViewPipeline(job.id)}>
-                View applicants
-              </button>
+              <span className={`dashboard-status ${job.status === 'closed' ? 'rejected' : 'shortlisted'}`}>
+                {job.status}
+              </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                <button
+                  className="dashboard-table-action"
+                  onClick={() => handleEditJobClick(job)}
+                  title="Edit job opening"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                  id={`edit-job-btn-${job.id}`}
+                >
+                  <Pencil size={12} />
+                  <span>Edit</span>
+                </button>
+                <button
+                  className="dashboard-table-action"
+                  onClick={() => onViewPipeline(job.id)}
+                  title="View candidates for this job"
+                  id={`view-applicants-btn-${job.id}`}
+                >
+                  View applicants
+                </button>
+              </div>
             </article>
           ))}
+          {(!statsData?.jobs || statsData.jobs.length === 0) && (
+            <div className="dashboard-empty">
+              <p>No jobs posted yet.</p>
+              <button className="btn btn-primary btn-sm" onClick={onOpenPostJob} style={{ marginTop: '0.5rem' }}>
+                <Plus size={14} /> Post Your First Job
+              </button>
+            </div>
+          )}
         </div>
       </section>
     </div>

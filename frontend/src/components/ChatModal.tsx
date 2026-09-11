@@ -113,7 +113,7 @@ export const ChatModal: React.FC<ChatModalProps> = ({
           className="modal-header"
           style={{
             padding: '1.15rem 1.5rem',
-            background: '#FFFFFF',
+            background: 'var(--bg-panel)',
             borderBottom: '1px solid var(--border-subtle)',
           }}
         >
@@ -160,7 +160,7 @@ export const ChatModal: React.FC<ChatModalProps> = ({
             display: 'flex',
             flexDirection: 'column',
             gap: '1rem',
-            background: '#F8F9FC',
+            background: 'var(--bg-surface)',
           }}
         >
           {isLoading ? (
@@ -273,7 +273,7 @@ export const ChatModal: React.FC<ChatModalProps> = ({
         <div
           style={{
             padding: '0.65rem 1.25rem',
-            background: '#FFFFFF',
+            background: 'var(--bg-panel)',
             borderTop: '1px solid var(--border-subtle)',
           }}
         >
@@ -313,8 +313,8 @@ export const ChatModal: React.FC<ChatModalProps> = ({
                   borderRadius: '999px',
                   fontSize: '0.74rem',
                   fontWeight: 500,
-                  background: '#F8F7FC',
-                  border: '1px solid rgba(99, 102, 241, 0.3)',
+                  background: 'rgba(99, 102, 241, 0.08)',
+                  border: '1px solid rgba(99, 102, 241, 0.25)',
                   color: 'var(--text-secondary)',
                   cursor: 'pointer',
                   transition: 'all 0.15s',
@@ -323,12 +323,12 @@ export const ChatModal: React.FC<ChatModalProps> = ({
                   gap: '4px',
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'rgba(99, 102, 241, 0.1)';
+                  e.currentTarget.style.background = 'rgba(99, 102, 241, 0.18)';
                   e.currentTarget.style.borderColor = '#818CF8';
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.background = '#F8F7FC';
-                  e.currentTarget.style.borderColor = 'rgba(99, 102, 241, 0.3)';
+                  e.currentTarget.style.background = 'rgba(99, 102, 241, 0.08)';
+                  e.currentTarget.style.borderColor = 'rgba(99, 102, 241, 0.25)';
                 }}
                 title={chip.text}
               >
@@ -344,7 +344,7 @@ export const ChatModal: React.FC<ChatModalProps> = ({
           style={{
             padding: '0.9rem 1.25rem',
             borderTop: '1px solid var(--border-subtle)',
-            background: '#FFFFFF',
+            background: 'var(--bg-panel)',
             display: 'flex',
             gap: '0.75rem',
             alignItems: 'center',

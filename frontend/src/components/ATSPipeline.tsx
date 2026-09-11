@@ -12,6 +12,7 @@ import {
   Check,
   Building2,
   ExternalLink,
+  Eye,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { Application, ApplicationStatus } from '../types';
@@ -22,12 +23,14 @@ interface ATSPipelineProps {
   initialJobId?: string;
   onOpenSchedule: (application: Application) => void;
   onOpenChat: (applicationId: string) => void;
+  onViewCandidate?: (application: Application) => void;
 }
 
 export const ATSPipeline: React.FC<ATSPipelineProps> = ({
   initialJobId,
   onOpenSchedule,
   onOpenChat,
+  onViewCandidate,
 }) => {
   const { user } = useAuth();
   const [applications, setApplications] = useState<Application[]>([]);
@@ -298,6 +301,7 @@ export const ATSPipeline: React.FC<ATSPipelineProps> = ({
 
                   {/* Action Bar */}
                   <div
+                    className="ats-card-action-bar"
                     style={{
                       display: 'flex',
                       alignItems: 'center',
@@ -309,10 +313,22 @@ export const ATSPipeline: React.FC<ATSPipelineProps> = ({
                     }}
                   >
                     <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                      Applied: {new Date(app.applied_at).toLocaleDateString()}
+                      Applied: {new Date(app.applied_at || app.created_at || Date.now()).toLocaleDateString()}
                     </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <div className="ats-actions-group" style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
+                      {/* View Candidate Details */}
+                      {onViewCandidate && (
+                        <button
+                          className="btn btn-secondary btn-sm"
+                          onClick={() => onViewCandidate(app)}
+                          id={`view-profile-btn-${app.id}`}
+                        >
+                          <Eye size={14} />
+                          <span>View Profile</span>
+                        </button>
+                      )}
+
                       {/* Shortlist action */}
                       {app.status !== 'shortlisted' && app.status !== 'interview' && (
                         <button
@@ -332,7 +348,7 @@ export const ATSPipeline: React.FC<ATSPipelineProps> = ({
                         id={`schedule-btn-${app.id}`}
                       >
                         <Calendar size={14} />
-                        <span>Schedule Interview</span>
+                        <span>Schedule</span>
                       </button>
 
                       {/* Reject */}

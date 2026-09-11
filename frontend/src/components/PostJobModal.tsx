@@ -22,47 +22,72 @@ import { JobLocationMap } from './JobLocationMap';
 interface PostJobModalProps {
   onClose: () => void;
   onSuccess: (jobTitle: string) => void;
+  jobToEdit?: import('../types').Job | null;
 }
 
-export const PostJobModal: React.FC<PostJobModalProps> = ({ onClose, onSuccess }) => {
+export const PostJobModal: React.FC<PostJobModalProps> = ({ onClose, onSuccess, jobToEdit }) => {
   const { user } = useAuth();
 
+  const isEditing = Boolean(jobToEdit);
   const isCompanyVerified = !!user?.is_verified;
   const [showVerificationModal, setShowVerificationModal] = useState(false);
 
-  const [title, setTitle] = useState('');
-  const [companyName, setCompanyName] = useState(user?.company_name || user?.full_name || 'TechNova Innovations');
-  const [department, setDepartment] = useState('Operations & Technology');
-  const [workplaceType, setWorkplaceType] = useState<'onsite' | 'hybrid' | 'remote'>('onsite');
-  const [location, setLocation] = useState('');
-  const [address, setAddress] = useState('');
-  const [city, setCity] = useState('');
-  const [state, setState] = useState('');
-  const [postalCode, setPostalCode] = useState('');
-  const [latitude, setLatitude] = useState<number | undefined>();
-  const [longitude, setLongitude] = useState<number | undefined>();
+  const [title, setTitle] = useState(jobToEdit?.title || '');
+  const [companyName, setCompanyName] = useState(
+    jobToEdit?.company_name || user?.company_name || user?.full_name || 'TechNova Innovations'
+  );
+  const [department, setDepartment] = useState(jobToEdit?.department || 'Operations & Technology');
+  const [workplaceType, setWorkplaceType] = useState<'onsite' | 'hybrid' | 'remote'>(
+    (jobToEdit?.workplace_type as 'onsite' | 'hybrid' | 'remote') ||
+    (jobToEdit?.location?.toLowerCase().includes('remote') ? 'remote' : 'onsite')
+  );
+  const [location, setLocation] = useState(jobToEdit?.location || '');
+  const [address, setAddress] = useState(jobToEdit?.address || '');
+  const [city, setCity] = useState(jobToEdit?.city || '');
+  const [state, setState] = useState(jobToEdit?.state || '');
+  const [postalCode, setPostalCode] = useState(jobToEdit?.postal_code || '');
+  const [latitude, setLatitude] = useState<number | undefined>(jobToEdit?.latitude);
+  const [longitude, setLongitude] = useState<number | undefined>(jobToEdit?.longitude);
   const [locationSearch, setLocationSearch] = useState('');
   const [locationStatus, setLocationStatus] = useState('');
-  const [locationConfirmed, setLocationConfirmed] = useState(false);
-  const [jobType, setJobType] = useState('Full-time');
-  const [shiftPreference, setShiftPreference] = useState('Day Shift');
-  const [flexibleHours, setFlexibleHours] = useState(true);
-  const [salaryRange, setSalaryRange] = useState('₹45,000 - ₹70,000 / mo');
-  const [description, setDescription] = useState('');
-  const [skills, setSkills] = useState<string[]>(['Project Management', 'Communication', 'Problem Solving']);
+  const [locationConfirmed, setLocationConfirmed] = useState(Boolean(jobToEdit));
+  const [jobType, setJobType] = useState(jobToEdit?.job_type || 'Full-time');
+  const [shiftPreference, setShiftPreference] = useState(jobToEdit?.shift_preference || 'Day Shift');
+  const [flexibleHours, setFlexibleHours] = useState(jobToEdit?.flexible_hours ?? true);
+  const [salaryRange, setSalaryRange] = useState(jobToEdit?.salary_range || '₹45,000 - ₹70,000 / mo');
+  const [description, setDescription] = useState(jobToEdit?.description || '');
+  const [jobStatus, setJobStatus] = useState<'active' | 'closed'>(
+    jobToEdit?.status === 'closed' ? 'closed' : 'active'
+  );
+  const [skills, setSkills] = useState<string[]>(
+    jobToEdit?.skills && jobToEdit.skills.length > 0
+      ? jobToEdit.skills
+      : ['Project Management', 'Communication', 'Problem Solving']
+  );
   const [newSkill, setNewSkill] = useState('');
   const [requirementsText, setRequirementsText] = useState(
-    'Demonstrated competence in role responsibilities\nStrong communication & collaborative attitude\nCommitment to quality execution and timely delivery'
+    jobToEdit?.requirements && jobToEdit.requirements.length > 0
+      ? jobToEdit.requirements.join('\n')
+      : 'Demonstrated competence in role responsibilities\nStrong communication & collaborative attitude\nCommitment to quality execution and timely delivery'
   );
   const [benefitsText, setBenefitsText] = useState(
-    'Health and accident coverage\nFlexible scheduling & performance bonuses\nProfessional training & skill advancement'
+    jobToEdit?.benefits && jobToEdit.benefits.length > 0
+      ? jobToEdit.benefits.join('\n')
+      : 'Health and accident coverage\nFlexible scheduling & performance bonuses\nProfessional training & skill advancement'
   );
   const [cultureText, setCultureText] = useState(
-    'Skill-first inclusive work environment\nTransparent evaluation and merit recognition\nSupportive peer network'
+    jobToEdit?.culture && jobToEdit.culture.length > 0
+      ? jobToEdit.culture.join('\n')
+      : 'Skill-first inclusive work environment\nTransparent evaluation and merit recognition\nSupportive peer network'
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
-  const workplaceLocationValid = workplaceType === 'remote' || Boolean(address && city && state && postalCode && latitude !== undefined && longitude !== undefined && locationConfirmed);
+  const workplaceLocationValid =
+    isEditing ||
+    workplaceType === 'remote' ||
+    Boolean(
+      address && city && state && postalCode && latitude !== undefined && longitude !== undefined && locationConfirmed
+    );
 
   const reverseGeocode = async (lat: number, lng: number) => {
     const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`);
@@ -157,32 +182,57 @@ export const PostJobModal: React.FC<PostJobModalProps> = ({ onClose, onSuccess }
       .filter(Boolean);
 
     try {
-      await api.createJob({
-        employer_id: user.id,
-        title,
-        company_name: companyName,
-        department,
-        location: workplaceType === 'remote' ? 'Remote' : location,
-        address: workplaceType === 'remote' ? undefined : address,
-        city: workplaceType === 'remote' ? undefined : city,
-        state: workplaceType === 'remote' ? undefined : state,
-        postal_code: workplaceType === 'remote' ? undefined : postalCode,
-        latitude: workplaceType === 'remote' ? undefined : latitude,
-        longitude: workplaceType === 'remote' ? undefined : longitude,
-        job_type: jobType,
-        shift_preference: shiftPreference,
-        flexible_hours: flexibleHours,
-        salary_range: salaryRange,
-        description,
-        skills,
-        requirements,
-        benefits,
-        culture,
-      });
+      if (jobToEdit) {
+        await api.updateJob(jobToEdit.id, {
+          title,
+          company_name: companyName,
+          department,
+          location: workplaceType === 'remote' ? 'Remote' : (location || address || 'Workplace location specified'),
+          address: workplaceType === 'remote' ? undefined : (address || location),
+          city: workplaceType === 'remote' ? undefined : city,
+          state: workplaceType === 'remote' ? undefined : state,
+          postal_code: workplaceType === 'remote' ? undefined : postalCode,
+          latitude: workplaceType === 'remote' ? undefined : latitude,
+          longitude: workplaceType === 'remote' ? undefined : longitude,
+          job_type: jobType,
+          shift_preference: shiftPreference,
+          flexible_hours: flexibleHours,
+          salary_range: salaryRange,
+          description,
+          skills,
+          requirements,
+          benefits,
+          culture,
+          status: jobStatus,
+        });
+      } else {
+        await api.createJob({
+          employer_id: user.id,
+          title,
+          company_name: companyName,
+          department,
+          location: workplaceType === 'remote' ? 'Remote' : location,
+          address: workplaceType === 'remote' ? undefined : address,
+          city: workplaceType === 'remote' ? undefined : city,
+          state: workplaceType === 'remote' ? undefined : state,
+          postal_code: workplaceType === 'remote' ? undefined : postalCode,
+          latitude: workplaceType === 'remote' ? undefined : latitude,
+          longitude: workplaceType === 'remote' ? undefined : longitude,
+          job_type: jobType,
+          shift_preference: shiftPreference,
+          flexible_hours: flexibleHours,
+          salary_range: salaryRange,
+          description,
+          skills,
+          requirements,
+          benefits,
+          culture,
+        });
+      }
       onSuccess(title);
       onClose();
     } catch (err: any) {
-      setError(err.message || 'Failed to post job');
+      setError(err.message || (isEditing ? 'Failed to update job' : 'Failed to post job'));
     } finally {
       setIsSubmitting(false);
     }
@@ -214,9 +264,13 @@ export const PostJobModal: React.FC<PostJobModalProps> = ({ onClose, onSuccess }
                 <Briefcase size={18} />
               </div>
               <div>
-                <h2 style={{ fontSize: '1.25rem', margin: 0 }}>Create Job Opening</h2>
+                <h2 style={{ fontSize: '1.25rem', margin: 0 }}>
+                  {isEditing ? 'Edit Job Opening' : 'Create Job Opening'}
+                </h2>
                 <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                  Published instantly to Candidate Discovery Feed & Commute Radar
+                  {isEditing
+                    ? 'Update requirements, salary, location, or listing status'
+                    : 'Published instantly to Candidate Discovery Feed & Commute Radar'}
                 </span>
               </div>
             </div>
@@ -310,6 +364,21 @@ export const PostJobModal: React.FC<PostJobModalProps> = ({ onClose, onSuccess }
                     <ShieldCheck size={14} />
                     <span>Verify Company Now</span>
                   </button>
+                </div>
+              )}
+
+              {isEditing && (
+                <div className="input-group" style={{ marginBottom: '1.25rem' }}>
+                  <label className="input-label">Job Listing Status *</label>
+                  <select
+                    className="input-field"
+                    value={jobStatus}
+                    onChange={(e) => setJobStatus(e.target.value as 'active' | 'closed')}
+                    id="job-status-select"
+                  >
+                    <option value="active">Active (Open to applicants)</option>
+                    <option value="closed">Closed / Paused</option>
+                  </select>
                 </div>
               )}
 
@@ -571,7 +640,17 @@ export const PostJobModal: React.FC<PostJobModalProps> = ({ onClose, onSuccess }
                 id="submit-post-job-btn"
               >
                 <PlusCircle size={16} />
-                <span>{isSubmitting ? 'Publishing Opening...' : workplaceType !== 'remote' && !workplaceLocationValid ? 'Workplace location is required' : 'Publish Job Requisition'}</span>
+                <span>
+                  {isSubmitting
+                    ? isEditing
+                      ? 'Saving Changes...'
+                      : 'Publishing Opening...'
+                    : isEditing
+                    ? 'Save Job Changes'
+                    : workplaceType !== 'remote' && !workplaceLocationValid
+                    ? 'Workplace location is required'
+                    : 'Publish Job Requisition'}
+                </span>
               </button>
             </div>
           </form>

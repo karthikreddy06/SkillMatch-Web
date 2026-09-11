@@ -39,6 +39,9 @@ export interface Profile {
   verification_submitted_at?: string;
   latitude?: number;
   longitude?: number;
+  founded_year?: string;
+  benefits?: string[];
+  culture?: string[];
 }
 
 export interface Job {
@@ -97,6 +100,7 @@ export interface Application {
   match_score: number;
   cover_letter?: string;
   applied_at: string;
+  created_at?: string;
   updated_at: string;
   job?: Job;
   applicant?: Profile;
