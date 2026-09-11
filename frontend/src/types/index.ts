@@ -167,3 +167,67 @@ export interface RecentlyViewedItem {
   viewed_at: string;
   job: Job;
 }
+
+export interface ResumeAnalysisResult {
+  resume_score: number;
+  overall_score: number;
+  breakdown: {
+    profile_completeness: number;
+    skills: number;
+    experience: number;
+    projects: number;
+    education: number;
+    keywords: number;
+  };
+  skills: string[];
+  skills_categorized?: {
+    languages?: string[];
+    frameworks?: string[];
+    databases?: string[];
+    cloud_devops?: string[];
+    tools_other?: string[];
+    soft_skills?: string[];
+  };
+  experience: {
+    years: number;
+    seniority: string;
+    detected_roles: string[];
+    primary_headline?: string;
+  };
+  education: string[];
+  certifications: string[];
+  projects: {
+    has_project_section: boolean;
+    project_count: number;
+    impact_statements: string[];
+    has_quantifiable_metrics: boolean;
+  };
+  detected_roles: string[];
+  strengths: string[];
+  weaknesses: string[];
+  improvements: string[];
+  missing_sections: string[];
+  improvement_suggestions: string[];
+  matching_jobs: Array<{
+    id: string;
+    title: string;
+    company_name: string;
+    location: string;
+    salary_range: string;
+    job_type: string;
+    match_score: number;
+    matched_skills: string[];
+    missing_skills: string[];
+    distance_km?: number | null;
+  }>;
+  extracted_profile_updates: {
+    skills?: string[];
+    experience_years?: number;
+    experience_level?: string;
+    headline?: string;
+    phone?: string;
+    location?: string;
+  };
+  filename?: string;
+  detected_format?: string;
+}

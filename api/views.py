@@ -20,6 +20,8 @@ from .serializers import (
     RecentlyViewedSerializer,
 )
 from .services.matcher import calculate_match_score
+from .services.resume_parser import parse_resume_source, ResumeParserError
+from .services.resume_analyzer import analyze_resume_text
 from .authentication import generate_dev_token
 
 SUPABASE_URL = (getattr(settings, 'SUPABASE_URL', None) or 'https://yqdzwruwcgsigxmofftt.supabase.co').rstrip('/')
@@ -652,6 +654,71 @@ def upload_resume(request):
         'filename': file_obj.name,
         'profile': profile_data
     }, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+def analyze_resume(request):
+    """
+    Intelligent ATS & Resume Analyzer.
+    Supports analyzing a newly uploaded file or the candidate's existing resume.
+    Calculates ATS score, extracted skills, experience insights, recommendations,
+    and job matches using matcher.py.
+    """
+    if not request.user or not request.user.is_authenticated:
+        return Response({'error': 'Authentication required'}, status=status.HTTP_401_UNAUTHORIZED)
+
+    use_existing = request.data.get('use_existing')
+    if isinstance(use_existing, str):
+        use_existing = use_existing.lower() in ('true', '1', 'yes')
+
+    file_obj = request.FILES.get('file')
+
+    # If use_existing is requested, or if no file is provided but user has resume_url
+    if use_existing or (not file_obj and getattr(request.user, 'resume_url', None)):
+        if not getattr(request.user, 'resume_url', None):
+            return Response(
+                {'error': 'No resume attached to your profile. Please upload a resume file to analyze.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        try:
+            extracted_text, detected_format, filename = parse_resume_source(
+                file_obj=None,
+                resume_url=request.user.resume_url
+            )
+        except ResumeParserError as e:
+            return Response({'error': e.message, 'code': e.code}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({'error': f'Failed to process existing resume: {str(e)}'}, status=status.HTTP_400_BAD_REQUEST)
+    elif file_obj:
+        try:
+            extracted_text, detected_format, filename = parse_resume_source(
+                file_obj=file_obj,
+                resume_url=None
+            )
+        except ResumeParserError as e:
+            return Response({'error': e.message, 'code': e.code}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({'error': f'Failed to process uploaded resume: {str(e)}'}, status=status.HTTP_400_BAD_REQUEST)
+    else:
+        return Response(
+            {'error': 'Please provide a resume file (file=...) or select use_existing=true.'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    # Fetch active jobs for job-aware matching preview
+    active_jobs = list(Jobs.objects.filter(status='active').exclude(employer_id=request.user.id)[:20])
+
+    analysis_results = analyze_resume_text(
+        raw_text=extracted_text,
+        candidate_profile=request.user,
+        active_jobs=active_jobs
+    )
+
+    analysis_results['filename'] = filename
+    analysis_results['detected_format'] = detected_format
+
+    return Response(analysis_results, status=status.HTTP_200_OK)
 
 
 # =============================================================================

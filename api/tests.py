@@ -1,6 +1,7 @@
 import uuid
 import jwt
 from datetime import datetime, timezone, timedelta
+from unittest.mock import patch
 from django.test import SimpleTestCase, TestCase
 from django.conf import settings
 from rest_framework.test import APIRequestFactory, force_authenticate
@@ -468,3 +469,155 @@ class SecurityHeaderAndUploadSecurityTests(SimpleTestCase):
         res_resume = upload_resume(req_resume)
         self.assertEqual(res_resume.status_code, 400)
         self.assertIn('Invalid file format', res_resume.data.get('error', ''))
+
+
+class AIResumeAnalyzerTests(SimpleTestCase):
+    """
+    Unit tests for AI Resume Analyzer (resume_parser, resume_analyzer, and analyze_resume view).
+    """
+
+    def setUp(self):
+        self.factory = APIRequestFactory()
+
+    def test_parser_empty_document_raises_error(self):
+        from api.services.resume_parser import parse_resume_bytes, ResumeParserError
+        with self.assertRaises(ResumeParserError) as ctx:
+            parse_resume_bytes(b"", "empty.pdf")
+        self.assertEqual(ctx.exception.code, 'EMPTY_FILE')
+
+    def test_parser_oversized_file_raises_error(self):
+        from api.services.resume_parser import parse_resume_bytes, ResumeParserError
+        oversized_bytes = b"0" * (6 * 1024 * 1024)
+        with self.assertRaises(ResumeParserError) as ctx:
+            parse_resume_bytes(oversized_bytes, "big.pdf")
+        self.assertEqual(ctx.exception.code, 'FILE_TOO_LARGE')
+
+    def test_parser_unsupported_format_raises_error(self):
+        from api.services.resume_parser import parse_resume_bytes, ResumeParserError
+        with self.assertRaises(ResumeParserError) as ctx:
+            parse_resume_bytes(b"invalid data not pdf or docx", "test.exe")
+        self.assertEqual(ctx.exception.code, 'UNSUPPORTED_FORMAT')
+
+    def test_analyzer_deterministic_scoring(self):
+        from api.services.resume_analyzer import analyze_resume_text
+
+        sample_text = """
+        Rahul Verma
+        Email: rahul.verma@example.com | Phone: +91 9876543210
+        Location: Bangalore, India | LinkedIn: linkedin.com/in/rahulverma
+
+        Professional Summary
+        Experienced Full Stack Developer with 4 years of experience building modern web applications.
+
+        Technical Skills
+        Languages: Python, TypeScript, JavaScript, SQL
+        Frameworks: Django, React, FastAPI, Node.js
+        Databases: PostgreSQL, Redis, MongoDB
+        Cloud & DevOps: Docker, Kubernetes, AWS, Git, CI/CD
+
+        Experience
+        Senior Software Engineer - Tech Solutions (2021 - Present)
+        - Spearheaded microservices architecture reducing server latency by 40%.
+        - Engineered robust REST APIs handling 50k daily active users.
+        - Optimized PostgreSQL database indexes boosting query performance by 35%.
+
+        Education
+        Bachelor of Technology (B.Tech) in Computer Science
+
+        Key Projects
+        Enterprise ATS Platform
+        - Built automated candidate pipeline with real-time notifications.
+        - Integrated secure JWT authentication and role-based access control.
+
+        Certifications
+        AWS Certified Solutions Architect
+        """
+
+        res = analyze_resume_text(sample_text)
+        self.assertGreaterEqual(res['resume_score'], 80)
+        self.assertIn('Python', res['skills'])
+        self.assertIn('Django', res['skills'])
+        self.assertIn('React', res['skills'])
+        self.assertIn('PostgreSQL', res['skills'])
+        self.assertEqual(res['experience']['seniority'], 'Senior')
+        self.assertGreater(len(res['strengths']), 0)
+        self.assertIn('skills', res['extracted_profile_updates'])
+        self.assertIn('phone', res['extracted_profile_updates'])
+
+    def test_experience_parser_excludes_education_dates(self):
+        from api.services.resume_analyzer import analyze_resume_text
+
+        resume_text = """
+        Alex Morgan
+        alex.morgan@example.com | +1-555-234-5678 | San Francisco, CA
+
+        Professional Summary
+        Passionate Software Engineer with 3 years of experience.
+
+        Work Experience
+        Software Engineer | Acme Cloud Solutions | 2021 - 2024
+        - Developed RESTful APIs in Python.
+
+        Education
+        B.Tech Computer Science | State University | 2017 - 2021
+
+        Certifications
+        AWS Certified Solutions Architect
+        """
+
+        res = analyze_resume_text(resume_text)
+        self.assertEqual(res['experience']['years'], 3)
+        self.assertEqual(res['experience']['seniority'], 'Mid-Level')
+        self.assertEqual(res['experience']['detected_roles'], ['Software Engineer'])
+        self.assertEqual(res['extracted_profile_updates']['headline'], 'Software Engineer')
+
+    def test_analyze_resume_view_unauthenticated(self):
+        from api.views import analyze_resume
+        req = self.factory.post('/api/profiles/analyze-resume/', {})
+        # Not authenticated
+        req.user = None
+        res = analyze_resume(req)
+        self.assertIn(res.status_code, (401, 403))
+
+    def test_analyze_resume_view_missing_payload(self):
+        from api.views import analyze_resume
+        candidate = Profiles(id=uuid.uuid4(), role='seeker')
+        req = self.factory.post('/api/profiles/analyze-resume/', {})
+        req.user = candidate
+        res = analyze_resume(req)
+        self.assertEqual(res.status_code, 400)
+        self.assertIn('Please provide a resume file', res.data.get('error', ''))
+
+    def test_parser_legacy_doc_format_rejected(self):
+        from api.services.resume_parser import parse_resume_bytes, ResumeParserError
+        # Test both .doc filename and OLE2 header
+        ole_header = b'\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1' + b'\x00' * 50
+        with self.assertRaises(ResumeParserError) as ctx:
+            parse_resume_bytes(ole_header, "resume.doc")
+        self.assertEqual(ctx.exception.code, 'UNSUPPORTED_FORMAT')
+        self.assertIn('Legacy Word (.doc) format is not supported', ctx.exception.message)
+
+    @patch('api.views.Jobs.objects')
+    def test_analyze_resume_view_use_existing_success(self, mock_jobs):
+        import io, docx, base64
+        from api.views import analyze_resume
+
+        mock_jobs.filter.return_value.exclude.return_value = []
+
+        doc = docx.Document()
+        doc.add_heading("Alex Doe", level=0)
+        doc.add_paragraph("Email: alex@example.com | Phone: +1 555-0199")
+        doc.add_paragraph("Skills: Python, Django, PostgreSQL, Docker")
+        bio = io.BytesIO()
+        doc.save(bio)
+        b64_data = base64.b64encode(bio.getvalue()).decode('ascii')
+        data_uri = f'data:application/vnd.openxmlformats-officedocument.wordprocessingml.document;base64,{b64_data}'
+
+        candidate = Profiles(id=uuid.uuid4(), role='seeker', resume_url=data_uri)
+        req = self.factory.post('/api/profiles/analyze-resume/', {'use_existing': 'true'})
+        req.user = candidate
+        res = analyze_resume(req)
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.data.get('detected_format'), 'docx')
+        self.assertIn('Python', res.data.get('skills', []))
+        self.assertIn('Django', res.data.get('skills', []))

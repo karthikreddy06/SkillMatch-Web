@@ -23,9 +23,10 @@ import { VerifiedBadge } from './VerifiedBadge';
 interface ProfilePageProps {
   user: Profile | null;
   onEdit: () => void;
+  onNavigateAnalyzer?: () => void;
 }
 
-export const ProfilePage: React.FC<ProfilePageProps> = ({ user, onEdit }) => {
+export const ProfilePage: React.FC<ProfilePageProps> = ({ user, onEdit, onNavigateAnalyzer }) => {
   const isEmployer = user?.role === 'employer';
 
   if (isEmployer) {
@@ -351,11 +352,35 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ user, onEdit }) => {
           <FileText size={18} />
         </div>
         {user?.resume_url ? (
-          <a className="profile-resume-link" href={user.resume_url} target="_blank" rel="noreferrer">
-            <FileText size={17} /> Open attached resume
-          </a>
+          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
+            <a className="profile-resume-link" href={user.resume_url} target="_blank" rel="noreferrer">
+              <FileText size={17} /> Open attached resume
+            </a>
+            {onNavigateAnalyzer && (
+              <button
+                className="btn btn-primary btn-sm"
+                onClick={onNavigateAnalyzer}
+                id="profile-analyze-resume-btn"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
+              >
+                <Sparkles size={14} /> Analyze Resume
+              </button>
+            )}
+          </div>
         ) : (
-          <p className="dashboard-muted">No resume uploaded yet. Edit your profile to attach one.</p>
+          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
+            <p className="dashboard-muted" style={{ margin: 0 }}>No resume uploaded yet. Edit your profile or analyze a resume.</p>
+            {onNavigateAnalyzer && (
+              <button
+                className="btn btn-secondary btn-sm"
+                onClick={onNavigateAnalyzer}
+                id="profile-open-analyzer-btn"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
+              >
+                <Sparkles size={14} /> AI Resume Analyzer
+              </button>
+            )}
+          </div>
         )}
       </section>
     </div>

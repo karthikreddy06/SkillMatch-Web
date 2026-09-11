@@ -16,6 +16,7 @@ urlpatterns = [
     path('profiles/<uuid:pk>/', views.profile_detail, name='profile_detail'),
     path('profiles/upload-avatar/', views.upload_avatar, name='upload_avatar'),
     path('profiles/upload-resume/', views.upload_resume, name='upload_resume'),
+    path('profiles/analyze-resume/', views.analyze_resume, name='analyze_resume'),
 
     # Jobs & Recommendations
     path('jobs/', views.job_list_create, name='job_list_create'),

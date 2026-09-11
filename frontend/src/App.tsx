@@ -18,6 +18,7 @@ import { ChatModal } from './components/ChatModal';
 import { ChatInboxView } from './components/ChatInboxView';
 import { CandidateOverview } from './components/CandidateOverview';
 import { ProfilePage } from './components/ProfilePage';
+import { ResumeAnalyzerView } from './components/ResumeAnalyzerView';
 import { SettingsPage } from './components/SettingsPage';
 import { AuthModal } from './components/AuthModal';
 import { AnimatedFooter } from './components/AnimatedFooter';
@@ -89,7 +90,7 @@ const MainAppContent: React.FC = () => {
   }, []);
 
   const getParentTab = (tab: string) => {
-    if (tab === 'applications' || tab === 'saved' || tab === 'chat' || tab === 'profile' || tab === 'settings') return role === 'employer' ? 'dashboard' : 'overview';
+    if (tab === 'applications' || tab === 'saved' || tab === 'chat' || tab === 'profile' || tab === 'settings' || tab === 'matching' || tab === 'analyzer') return role === 'employer' ? 'dashboard' : 'overview';
     if (tab === 'pipeline' || tab === 'candidates' || tab === 'jobs' || tab === 'analytics') return 'dashboard';
     return role === 'employer' ? 'dashboard' : 'overview';
   };
@@ -410,7 +411,16 @@ const MainAppContent: React.FC = () => {
              2. AUTHENTICATED JOB SEEKER EXPERIENCE
              ========================================================================= */
           <>
-            {activeTab === 'profile' && <ProfilePage user={user} onEdit={() => { setIsProfileModalOpen(true); window.history.pushState({ skillmatch: true, tab: 'profile', modal: 'profile-edit' }, '', '#profile/edit-profile'); }} />}
+            {activeTab === 'profile' && (
+              <ProfilePage
+                user={user}
+                onEdit={() => {
+                  setIsProfileModalOpen(true);
+                  window.history.pushState({ skillmatch: true, tab: 'profile', modal: 'profile-edit' }, '', '#profile/edit-profile');
+                }}
+                onNavigateAnalyzer={() => navigateInApp('matching')}
+              />
+            )}
             {activeTab === 'settings' && <SettingsPage user={user} theme={theme} onThemeChange={setTheme} onEditProfile={() => { setIsProfileModalOpen(true); window.history.pushState({ skillmatch: true, tab: 'settings', modal: 'profile-edit' }, '', '#settings/edit-profile'); }} onSignOut={logout} onToast={showToast} />}
             {activeTab === 'overview' && (
               <CandidateOverview
@@ -424,7 +434,24 @@ const MainAppContent: React.FC = () => {
                 onExploreJobs={() => navigateInApp('discover')}
               />
             )}
-            {(activeTab === 'matching' || activeTab === 'activity') && (
+            {(activeTab === 'matching' || activeTab === 'analyzer') && (
+              <ResumeAnalyzerView
+                user={user}
+                onSelectJob={(job) => {
+                  setSelectedJobForDetails(job);
+                  window.history.pushState({ skillmatch: true, tab: activeTab, modal: 'job-details', jobId: job.id }, '', `#${activeTab}/job/${job.id}`);
+                }}
+                onProfileUpdated={(updatedProfile) => {
+                  setUserProfile(updatedProfile);
+                }}
+                onToast={showToast}
+                onOpenEditProfile={() => {
+                  setIsProfileModalOpen(true);
+                  window.history.pushState({ skillmatch: true, tab: activeTab, modal: 'profile-edit' }, '', `#${activeTab}/edit-profile`);
+                }}
+              />
+            )}
+            {activeTab === 'activity' && (
               <CandidateOverview
                 user={user}
                 jobs={jobs}

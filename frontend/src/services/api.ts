@@ -8,6 +8,7 @@ import {
   SavedJobItem,
   RecentlyViewedItem,
   ApplicationStatus,
+  ResumeAnalysisResult,
 } from '../types';
 
 const configuredApiBaseUrl = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL;
@@ -196,6 +197,20 @@ class ApiService {
 
   async uploadResume(formData: FormData): Promise<{ success: boolean; resume_url: string; filename?: string; profile?: Profile }> {
     return this.request<{ success: boolean; resume_url: string; filename?: string; profile?: Profile }>('/profiles/upload-resume/', {
+      method: 'POST',
+      body: formData,
+    });
+  }
+
+  async analyzeResume(options: { file?: File; useExisting?: boolean }): Promise<ResumeAnalysisResult> {
+    const formData = new FormData();
+    if (options.file) {
+      formData.append('file', options.file);
+    }
+    if (options.useExisting) {
+      formData.append('use_existing', 'true');
+    }
+    return this.request<ResumeAnalysisResult>('/profiles/analyze-resume/', {
       method: 'POST',
       body: formData,
     });
